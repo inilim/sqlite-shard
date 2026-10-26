@@ -1,5 +1,5 @@
 {
-    "name": "inilim/sqlite-shard-writer",
+    "name": "inilim/sqlite-shard",
     "type": "library",
     "license": "MIT",
     "autoload": {
