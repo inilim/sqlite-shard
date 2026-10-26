@@ -1,0 +1,14 @@
+- [x] Для свежего активного шарда возвращает тот же объект `Registry`, обновляет `updated_at`, после чего `leftTimeUntilRelease` примерно равно `rent_timeout`, а `rentValid` — `true`. — покрыто: `HeartbeatTest::testHeartbeatRenewsFreshLease`
+- [x] Для активного шарда с `updated_at` `20` секунд назад и таймаутом `30` (остаток около `10`) успешно продлевает аренду: остаток возвращается к примерно `30`. — покрыто: `HeartbeatTest::testHeartbeatRenewsAlmostExpiredLease`
+- [x] Повторный вызов через секунду снова успешен; `updated_at` продвигается вперёд. — покрыто: `HeartbeatTest::testRepeatedHeartbeatAdvancesTimestamp`
+- [x] Для свободного шарда выбрасывает `ShardRentLostException`; активность и `updated_at` не меняются. — покрыто: `HeartbeatTest::testFreeShardThrowsRentLost`
+- [x] Для просроченного активного шарда выбрасывает `ShardRentLostException`; шард остаётся активным и просроченным, `updated_at` не меняется. — покрыто: `HeartbeatTest::testExpiredActiveThrowsRentLost`
+- [x] Для несуществующего шарда выбрасывает `ShardNotFoundException`, а не `ShardRentLostException`. — покрыто: `HeartbeatTest::testNonexistentShardThrowsNotFound`
+- [x] Для освобождённого шарда выбрасывает `ShardRentLostException`. — покрыто: `HeartbeatTest::testReleasedShardThrowsRentLost`
+- [x] При `rent_timeout = 1` сразу после аренды вызов успешен; после паузы 2 секунды — `ShardRentLostException`. — покрыто: `HeartbeatTest::testTinyTimeout`
+- [x] Для активного шарда с `updated_at` ровно `time() - rent_timeout` выбрасывает `ShardRentLostException` (граница `>`). — покрыто: `HeartbeatTest::testBoundaryThrowsRentLost`
+- [x] При очень большом `rent_timeout` (например, `PHP_INT_MAX`) продление успешно. — покрыто: `HeartbeatTest::testHugeRentTimeoutSucceeds`
+- [x] Отсутствие файла шарда не мешает продлению: метод работает с записью реестра. — покрыто: `HeartbeatTest::testMissingShardFileDoesNotPreventRenewal`
+- [x] При неудаче состояние шарда и других шардов не меняется; шард не переводится в неактивное состояние. — покрыто: `HeartbeatTest::testFailedHeartbeatLeavesEverythingUnchanged`
+- [x] Сообщение `ShardRentLostException` содержит `id` шарда. — покрыто: `HeartbeatTest::testExceptionMessageContainsShardId`
+- [x] Метод возвращает тот же объект `Registry`; поддерживает цепочку. — покрыто: `HeartbeatTest::testChainingSucceedsForActiveShard`

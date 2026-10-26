@@ -1,0 +1,6 @@
+- [x] Возвращает один объект `Shard`, увеличивает количество шардов ровно на `1`. — покрыто: `CreateNewShardTest::testReturnsOneShardAndIncrementsCount`
+- [x] Новый шард свободен, имеет файл `baseDir/{id}.sqlite` и схему из `schemaSql`. — покрыто: `CreateNewShardTest::testNewShardIsFreeWithFileAndSchema`
+- [x] Три последовательных вызова создают три разных шарда с уникальными `id`. — покрыто: `CreateNewShardTest::testThreeCallsCreateThreeDistinctShards`
+- [x] Существующие шарды и их состояние не меняются. — покрыто: `CreateNewShardTest::testExistingShardsUntouched`
+- [x] Ошибка при создании (некорректная схема в повреждённом реестре) выбрасывается наружу; частично созданный файл удаляется, запись не добавляется. — покрыто: `CreateNewShardTest::testSchemaFailureThrowsAndCleansUp`
+- [x] Метод не меняет `min_shards` и не запускает дополнительное создание шардов. — покрыто: `CreateNewShardTest::testDoesNotChangeMinShardsAndCreatesExactlyOne`

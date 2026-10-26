@@ -1,0 +1,9 @@
+- [x] Для существующего свободного шарда возвращается `true`. — покрыто: `ExistsShardTest::testReturnsTrueForExistingFreeShard`
+- [x] Для существующего занятого шарда возвращается `true`. — покрыто: `ExistsShardTest::testReturnsTrueForBusyShard`
+- [x] Для существующего просроченного и для освобождённого шарда возвращается `true`. — покрыто: `ExistsShardTest::testReturnsTrueForExpiredAndReleasedShards`
+- [x] Для `Shard` с `id`, которого нет в реестре, возвращается `false` без исключения. — покрыто: `ExistsShardTest::testReturnsFalseForNonexistentId`
+- [x] Для объекта `Shard` с `id` существующего шарда, но с `reg`, указывающим на другой реестр, возвращается `true`: метод проверяет только `id` в текущем реестре (текущее поведение). — покрыто: `ExistsShardTest::testResultDoesNotDependOnShardRegistryReference`
+- [x] Для `Shard` с пустым `id` возвращается `false`. — покрыто: `ExistsShardTest::testReturnsFalseForEmptyId`
+- [x] Если запись шарда удалена, но файл остался, возвращается `false`. — покрыто: `ExistsShardTest::testReturnsFalseAfterRowDeletedEvenIfFileRemains`
+- [x] Если файл шарда удалён, но запись осталась, возвращается `true`. — покрыто: `ExistsShardTest::testReturnsTrueAfterFileDeleted`
+- [x] Метод не меняет состояние аренды и не обращается к файлу шарда. — покрыто: `ExistsShardTest::testDoesNotChangeShardState`

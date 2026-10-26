@@ -1,0 +1,12 @@
+- [x] Для свободного шарда возвращает `true`, и шард действительно становится арендованным (`isFree` — `false`, `rentValid` — `true`). — покрыто: `TryRentTest::testTryRentOnFreeShardReturnsTrueAndRents`
+- [x] Для свежего активного шарда возвращает `false`; состояние шарда не меняется. — покрыто: `TryRentTest::testTryRentOnFreshActiveShardReturnsFalseAndKeepsState`
+- [x] Для просроченного активного шарда возвращает `true` и продлевает аренду. — покрыто: `TryRentTest::testTryRentOnExpiredActiveShardReturnsTrueAndRenews`
+- [x] Для освобождённого шарда возвращает `true` и арендует его. — покрыто: `TryRentTest::testTryRentOnReleasedShardReturnsTrue`
+- [x] Для несуществующего шарда выбрасывает `ShardNotFoundException`: метод не превращает ошибку отсутствия в `false`. — покрыто: `TryRentTest::testTryRentOnNonexistentShardThrowsShardNotFoundException`
+- [x] После успешного вызова повторный вызов возвращает `false`. — покрыто: `TryRentTest::testSecondTryRentAfterSuccessReturnsFalse`
+- [x] При гонке двух экземпляров проверяется: ровно один `tryRent` возвращает `true`, второй — `false` (внутри проигравшего `ShardNotFreeException` превращается в `false`). Это не гарантия, а детектор: если `rent` не атомарен, оба вызова вернут `true`, и тест упадёт. — покрыто: `TryRentTest::testTryRentRaceSecondInstanceReturnsFalse` (параллельно: два потока inilim/parallel)
+- [x] В отличие от `rent`, не выбрасывает `ShardNotFreeException`; другие исключения не перехватывает. — покрыто: `TryRentTest::testTryRentReturnsFalseForBusyShardInsteadOfException`, `TryRentTest::testTryRentOnNonexistentShardThrowsShardNotFoundException`
+- [x] Возвращает именно `bool`: `true` или `false`. — покрыто: `TryRentTest::testTryRentReturnsBool`
+- [x] Отсутствие файла шарда не мешает успешной аренде. — покрыто: `TryRentTest::testTryRentSucceedsWhenShardFileIsMissing`
+- [x] Изменение `rent_timeout` меняет результат для того же шарда. — покрыто: `TryRentTest::testChangingRentTimeoutChangesTryRentResult`
+- [x] Два экземпляра одновременно вызывают `tryRent` для одного свободного шарда. Проверяется (параллельно): один возвращает `true`, второй — `false`; состояние шарда соответствует одному успешному арендатору. Это также детектор неатомарности `rent`: два `true` означают двойную выдачу и роняют тест. — покрыто: `TryRentTest::testTryRentRaceSecondInstanceReturnsFalse` (параллельно: два потока inilim/parallel, старт выравнен по стартовой миллисекунде)

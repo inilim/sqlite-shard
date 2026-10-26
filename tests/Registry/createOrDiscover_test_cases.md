@@ -1,0 +1,15 @@
+- [x] Для нового имени создаёт реестр так же, как `create()`: файл реестра, `config->minShards` свободных шардов со схемой, `getName()` и `baseDir`, равные значениям конфигурации. — покрыто: `CreateOrDiscoverTest::testCreatesNewRegistryWhenAbsent`
+- [x] Для существующего реестра (созданного через `create()`) возвращает его и не выбрасывает `RegistryNameExistsException`. — покрыто: `CreateOrDiscoverTest::testReturnsExistingRegistryWithoutThrowing`
+- [x] Для существующего реестра `config->minShards` игнорируется: если реестр создан с `minShards = 2` и в нём 2 шарда, вызов с `config->minShards = 5` возвращает 2 шарда; повторный вызов и последующий `discover()` оставляют 2 шарда. — покрыто: `CreateOrDiscoverTest::testConfigMinShardsIgnoredForExistingRegistry`
+- [x] Если текущее количество записей меньше сохранённого `min_shards`, встроенный `discover()` создаёт недостающие шарды до сохранённого минимума; `config->minShards` на количество не влияет. — покрыто: `CreateOrDiscoverTest::testFillsMissingShardsUpToSavedMinimum`
+- [x] Если `config->minShards` меньше текущего количества, шарды не удаляются. — покрыто: `CreateOrDiscoverTest::testNeverDeletesShards`
+- [x] `rentTimeout` из конфигурации не применяется к существующему реестру: используется сохранённый таймаут; конфигурационное значение не влияет на `isFree`, `leftTimeUntilRelease`, `rent` и `heartbeat`. — покрыто: `CreateOrDiscoverTest::testConfigRentTimeoutIgnoredForExistingRegistry`
+- [x] `schemaSql` из конфигурации не меняет схему существующих шардов; новые шарды, созданные при нехватке до сохранённого минимума, используют сохранённую схему. — покрыто: `CreateOrDiscoverTest::testConfigSchemaSqlIgnoredForExistingRegistry`
+- [x] Для другого имени в той же директории создаёт отдельный реестр, не затрагивая существующий. — покрыто: `CreateOrDiscoverTest::testCreatesSeparateRegistryForAnotherName`
+- [x] Для повреждённого существующего файла выбрасывает `RegistryInvalidException` и не перезаписывает файл. — покрыто: `CreateOrDiscoverTest::testEmptyFileThrowsRegistryInvalid`
+- [x] Для неподдерживаемой версии выбрасывает `RegistryVersionMismatchException` и не перезаписывает файл. — покрыто: `CreateOrDiscoverTest::testWrongVersionThrowsMismatch`
+- [x] Новый экземпляр имеет `minSecHeartbeat = 10`. — покрыто: `CreateOrDiscoverTest::testMinSecHeartbeatIsAlwaysTen`
+- [x] `createOrDiscover()` для существующего реестра (созданного через `create()`) не выбрасывает `RegistryNameExistsException`. — покрыто: `CreateOrDiscoverTest::testReturnsExistingRegistryWithoutThrowing`
+- [x] Возвращает `Registry` (не `null`), кроме случаев, когда выбрасывается исключение. — покрыто: `CreateOrDiscoverTest::testReturnsRegistryInBothCases`
+- [x] Настройки, сохранённые при создании реестра, не перезаписываются конфигурацией при последующих вызовах и видны последующим `discover()`. — покрыто: `CreateOrDiscoverTest::testSavedSettingsNotOverwrittenByLaterCalls`
+- [x] Повторные вызовы стабильны: количество шардов равно `max(текущее_количество, сохранённый_min_shards)` и не меняется от вызова к вызову. — покрыто: `CreateOrDiscoverTest::testRepeatedCallsAreStable`

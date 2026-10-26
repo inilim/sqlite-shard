@@ -1,0 +1,12 @@
+- [x] Для только что созданного шарда возвращается `true`. — покрыто: `IsFreeTest::testFreshlyCreatedShardIsFree`
+- [x] Для свежего активного шарда возвращается `false`. — покрыто: `IsFreeTest::testFreshActiveShardIsNotFree`
+- [x] Для активного шарда с `updated_at` равным `time() - rent_timeout` возвращается `true` (граница `<=`). — покрыто: `IsFreeTest::testActiveShardWithUpdatedAtOnBoundaryIsFree`
+- [x] Для активного шарда с заметно более новым `updated_at` возвращается `false`. — покрыто: `IsFreeTest::testActiveShardWithFreshUpdatedAtIsNotFree`
+- [x] Для освобождённого шарда возвращается `true` независимо от `updated_at`. — покрыто: `IsFreeTest::testReleasedShardIsFreeRegardlessOfUpdatedAt`
+- [x] Для неактивного шарда с `updated_at` в будущем возвращается `true`. — покрыто: `IsFreeTest::testInactiveShardWithFutureUpdatedAtIsFree`
+- [x] Для несуществующего шарда выбрасывается `ShardNotFoundException`; возврат `false` в этом случае недопустим. — покрыто: `IsFreeTest::testNonexistentShardThrowsShardNotFoundException`
+- [x] Изменение `rent_timeout` сразу меняет результат согласно новому порогу. — покрыто: `IsFreeTest::testChangingRentTimeoutChangesResult`
+- [x] После успешного `heartbeat` свежий активный шард остаётся занятым (`false`); после `release` становится свободным (`true`). — покрыто: `IsFreeTest::testHeartbeatKeepsShardBusyAndReleaseMakesItFree`
+- [x] Отсутствие файла шарда не влияет на результат; проверяется только запись реестра. — покрыто: `IsFreeTest::testMissingShardFileDoesNotAffectResult`
+- [x] Метод не меняет состояние шарда (не арендует и не освобождает). — покрыто: `IsFreeTest::testMethodDoesNotChangeShardState`
+- [x] Для шарда, чей `id` существует в текущем реестре, результат определяется этим реестром, даже если объект `Shard` ссылается на другой `Registry`. — покрыто: `IsFreeTest::testResultDefinedByRegistryWhoseMethodWasCalled`

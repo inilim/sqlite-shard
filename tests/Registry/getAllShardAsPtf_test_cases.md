@@ -1,0 +1,11 @@
+- [x] Возвращает `\Generator`. — покрыто: `GetAllShardAsPtfTest::testReturnsGenerator`
+- [x] Для пустого реестра генератор не выдаёт ни одной пары. — покрыто: `GetAllShardAsPtfTest::testEmptyRegistryYieldsNothing`
+- [x] Для `N` шардов выдаёт ровно `N` пар; ключи — `id` шардов, значения — пути к файлам. — покрыто: `GetAllShardAsPtfTest::testYieldsIdToPathPairs`
+- [x] Каждый путь соответствует `baseDir/{id}.sqlite` в нормализованном виде, и файл по этому пути существует. — покрыто: `GetAllShardAsPtfTest::testEachPathIsAnExistingFile`
+- [x] В результат входят шарды в любом состоянии аренды. — покрыто: `GetAllShardAsPtfTest::testIncludesShardsInAnyRentState`
+- [x] Генератор ленивый: при создании объекта запрос к реестру не выполняется; шард, добавленный до первого обращения к генератору, попадает в результат. — покрыто: `GetAllShardAsPtfTest::testShardAddedBeforeIterationIsIncluded`
+- [x] Шард, добавленный после начала итерации, уже не попадает в текущую итерацию, потому что список шардов был получен в начале. — покрыто: `GetAllShardAsPtfTest::testShardAddedAfterIterationStartedIsNotIncluded`
+- [x] Если файл шарда отсутствует, пара всё равно выдаётся: метод не проверяет наличие файла. — покрыто: `GetAllShardAsPtfTest::testMissingFileStillYieldsPair`
+- [x] Повторная итерация того же генератора невозможна (поведение `\Generator`). — покрыто: `GetAllShardAsPtfTest::testGeneratorCannotBeReiterated`
+- [x] Порядок пар соответствует `getAllShards` и не гарантирован. — покрыто: `GetAllShardAsPtfTest::testKeySetMatchesAllShardIds`
+- [x] Метод не открывает соединения и не меняет состояние реестра. — покрыто: `GetAllShardAsPtfTest::testDoesNotChangeState`

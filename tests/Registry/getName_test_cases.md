@@ -1,0 +1,7 @@
+- [x] После `create()` метод возвращает точное значение `name`, переданное в `CreateConfig`. — покрыто: `GetNameTest::testReturnsNameFromConfigAfterCreate`, `CreateTest::testCreatesRegistryFileAndReturnsRegistry`
+- [x] После `discover()` метод возвращает то же имя, которое было использовано при создании. — покрыто: `GetNameTest::testReturnsSameNameAfterDiscover`
+- [x] Имя с пробелами, кириллицей, регистром и специальными символами возвращается без изменений, обрезки пробелов и смены регистра. — покрыто: `GetNameTest::testComplexNameReturnedVerbatim`
+- [x] Два реестра в одной директории с именами, различающимися только регистром, независимы; каждый `getName()` возвращает своё имя. — покрыто: `GetNameTest::testRegistriesDifferingInCaseAreIndependent`
+- [x] `createOrDiscover()` возвращает реестр, у которого `getName()` равно имени конфигурации. — покрыто: `GetNameTest::testCreateOrDiscoverKeepsName`
+- [x] Если в повреждённом реестре удалён ключ `name`, вызов `getName()` выбрасывает `KeyNotFoundKvException`. — покрыто: `GetNameTest::testMissingNameKeyThrowsKeyNotFound`
+- [x] Для валидного реестра (созданного `create()` либо открытого `discover()`) возвращает `string` с точным именем; для повреждённого реестра без ключа `name` — `KeyNotFoundKvException` (кейс выше). — покрыто: `GetNameTest::testReturnsNameFromConfigAfterCreate`

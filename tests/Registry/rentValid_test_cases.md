@@ -1,0 +1,15 @@
+- [x] Для только что арендованного шарда возвращает `true`. — покрыто: `RentValidTest::testFreshlyRentedReturnsTrue`
+- [x] Для только что созданного свободного шарда возвращает `false`. — покрыто: `RentValidTest::testFreeShardReturnsFalse`
+- [x] Для освобождённого шарда возвращает `false`. — покрыто: `RentValidTest::testReleasedShardReturnsFalse`
+- [x] Для неактивного шарда с `updated_at` в будущем возвращает `false` (`active = 0` важнее времени). — покрыто: `RentValidTest::testInactiveShardWithFutureTimestampReturnsFalse`
+- [x] Для свежего активного шарда возвращает `true`. — покрыто: `RentValidTest::testActiveWithCurrentTimestampReturnsTrue`
+- [x] Для активного шарда с `updated_at` ровно `time() - rent_timeout` возвращает `false` (граница `>`). — покрыто: `RentValidTest::testActiveOnTimeoutBoundaryReturnsFalse`
+- [x] Для активного шарда с заметно более старым `updated_at` возвращает `false`. — покрыто: `RentValidTest::testExpiredActiveReturnsFalse`
+- [x] Для несуществующего шарда возвращает `false` и не выбрасывает исключение; это отличие от `isFree`, `leftTimeUntilRelease`, `heartbeat` и `release`. — покрыто: `RentValidTest::testNonexistentShardReturnsFalseWithoutThrowing`
+- [x] Отсутствие файла шарда не влияет на результат. — покрыто: `RentValidTest::testMissingFileDoesNotAffectResult`
+- [x] После успешного `heartbeat` возвращает `true`. — покрыто: `RentValidTest::testHeartbeatKeepsRentValid`
+- [x] После истечения аренды (например, `rent_timeout = 1` и пауза 2 секунды) возвращает `false`. — покрыто: `RentValidTest::testLeaseExpirationMakesRentInvalid`
+- [x] Увеличение таймаута может вернуть `true` для активного шарда, который был просрочен: при `updated_at` `35` секунд назад `rentValid` сначала `false`, после `setRentTimeout(60)` — `true`. — покрыто: `RentValidTest::testIncreasingRentTimeoutMakesRentValid`
+- [x] Уменьшение таймаута может вернуть `false`: при `updated_at` `20` секунд назад и таймауте `30` — `true`, после `setRentTimeout(10)` — `false`. — покрыто: `RentValidTest::testDecreasingRentTimeoutMakesRentInvalid`
+- [x] Метод не меняет состояние шарда. — покрыто: `RentValidTest::testDoesNotChangeState`
+- [x] Второй экземпляр `Registry` видит актуальное значение для аренды, сделанной первым. — покрыто: `RentValidTest::testSecondInstanceSeesUpdatedState`

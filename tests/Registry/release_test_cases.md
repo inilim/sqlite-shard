@@ -1,0 +1,13 @@
+- [x] Для арендованного шарда возвращает тот же объект `Registry`; после вызова `isFree` — `true`, `rentValid` — `false`, `leftTimeUntilRelease` — `-1`, а `updated_at` становится текущим временем. — покрыто: `ReleaseTest::testReleasedBusyShardBecomesFree`
+- [x] `updated_at` обновляется при освобождении активного шарда: шард A активен с `updated_at` `100` секунд назад, шард B неактивен с `updated_at` `50` секунд назад; после `release(A)` в `getFreeShards` B идёт раньше A, потому что `updated_at` A стал текущим временем. — покрыто: `ReleaseTest::testActiveShardGetsFreshTimestampOnRelease`
+- [x] Для уже свободного шарда метод не выбрасывает исключение, возвращает тот же объект `Registry` и не меняет `updated_at`: если A неактивен с `updated_at` `100` секунд назад, а B неактивен с `updated_at` `50` секунд назад, после `release(A)` A по-прежнему идёт раньше B. — покрыто: `ReleaseTest::testReleaseOfFreeShardDoesNotTouchTimestamp`
+- [x] Для просроченного активного шарда переводит его в неактивное состояние и обновляет `updated_at` текущим временем; `leftTimeUntilRelease` становится `-1`. — покрыто: `ReleaseTest::testReleaseOfExpiredActiveShard`
+- [x] Для несуществующего шарда выбрасывает `ShardNotFoundException`. — покрыто: `ReleaseTest::testNonexistentShardThrows`
+- [x] Количество шардов не меняется; `existsShard` продолжает возвращать `true`; файл шарда остаётся. — покрыто: `ReleaseTest::testDoesNotRemoveShard`
+- [x] Освобождённый шард можно снова арендовать через `rent` или `rentFree`. — покрыто: `ReleaseTest::testReleasedShardCanBeRentedAgain` (через `rent`), `RentFreeTest::testRentFreeReturnsReleasedShard` (через `rentFree`)
+- [x] Повторный `release` того же шарда не выбрасывает исключение; второй вызов не меняет `updated_at`, потому что шард уже неактивен. — покрыто: `ReleaseTest::testRepeatedReleaseIsNoOp`
+- [x] После `release` вызов `heartbeat` и `heartbeat_m2` для этого шарда выбрасывает `ShardRentLostException`. — покрыто: `ReleaseTest::testHeartbeatAfterReleaseThrowsRentLost`
+- [x] Освобождение одного шарда не меняет состояние и `updated_at` других шардов. — покрыто: `ReleaseTest::testOtherActiveShardsUntouched`
+- [x] Отсутствие файла шарда не мешает освобождению: метод работает с записью реестра. — покрыто: `ReleaseTest::testMissingFileDoesNotPreventRelease`
+- [x] Если шард неактивен, но `updated_at` в будущем, повторный `release` оставляет его неактивным и не меняет `updated_at`. — покрыто: `ReleaseTest::testReleaseOfInactiveFutureShardKeepsItInactive`
+- [x] Метод поддерживает цепочку и возвращает тот же объект `Registry`. — покрыто: `ReleaseTest::testChainingIsSupported`

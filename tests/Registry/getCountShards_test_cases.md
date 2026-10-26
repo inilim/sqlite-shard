@@ -1,0 +1,8 @@
+- [x] После `create()` с `minShards = 5` возвращается `5`. — покрыто: `GetCountShardsTest::testAfterCreateWithMinShardsFiveReturnsFive`
+- [x] После `createNewShards(3)` возвращается `8`. — покрыто: `GetCountShardsTest::testAfterCreateNewShardsReturnsIncreasedCount`
+- [x] Взятие аренды, продление и освобождение не меняют значение. — покрыто: `GetCountShardsTest::testRentHeartbeatReleaseDoNotChangeCount`
+- [x] После удаления одной записи шарда напрямую из реестра возвращается на `1` меньше; при удалении всех записей — `0`. — покрыто: `GetCountShardsTest::testDeletingRowsChangesCount`
+- [x] Возвращаемое значение имеет тип `int` (например, строго `5`, а не `'5'`). — покрыто: `GetCountShardsTest::testReturnValueIsInt`
+- [x] Значение совпадает с количеством элементов `getAllShards()`. — покрыто: `GetCountShardsTest::testValueEqualsNumberOfAllShards`
+- [x] Метод не создаёт шарды и не пытается довести их количество до `min_shards`. — покрыто: `GetCountShardsTest::testMethodDoesNotCreateShardsUpToMinShards`
+- [x] Шард с отсутствующим файлом продолжает учитываться, пока существует его запись. — покрыто: `GetCountShardsTest::testShardWithMissingFileIsStillCounted`

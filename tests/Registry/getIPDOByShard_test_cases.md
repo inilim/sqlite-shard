@@ -1,0 +1,14 @@
+- [x] Для существующего шарда возвращает объект `IPDOSQLite`. — покрыто: `GetIPDOByShardTest::testReturnsIPDOSQLiteInstance`
+- [x] `getMainFile()` возвращает путь `baseDir/{id}.sqlite` в нормализованном виде. — покрыто: `GetIPDOByShardTest::testMainFileMatchesShardPath`
+- [x] Соединение создаётся лениво: сразу после возврата `isConnected()` даёт `false`; после любого запроса, включая `getMainFile()`, — `true`. — покрыто: `GetIPDOByShardTest::testLazyConnection` (ленивость проверена через `isConnected()` до/после первого запроса)
+- [x] В возвращённом SQLite доступна схема из `schemaSql`: таблица `items` существует, по ней выполняются `SELECT` и `INSERT`. — покрыто: `GetIPDOByShardTest::testSchemaIsUsable`
+- [x] Запись, сделанная через один полученный объект, видна через второй объект, полученный повторным вызовом для того же шарда. — покрыто: `GetIPDOByShardTest::testWritesVisibleAcrossInstances`
+- [x] Два вызова возвращают разные объекты `IPDOSQLite`, работающие с одним и тем же файлом. — покрыто: `GetIPDOByShardTest::testEachCallReturnsNewInstance`
+- [x] Метод не требует аренды: работает для свободного, занятого, просроченного и освобождённого шарда. — покрыто: `GetIPDOByShardTest::testWorksInAnyRentState`
+- [x] Для несуществующего шарда выбрасывает `ShardNotFoundException` даже при наличии файла с таким `id` на диске. — покрыто: `GetIPDOByShardTest::testNonexistentShardThrowsEvenIfFileExists`
+- [x] Если запись есть, а файл удалён, метод всё равно возвращает объект `IPDOSQLite`; первая операция с этим объектом выбрасывает `IPDOException` с сообщением о том, что файл не найден. Сам вызов `getIPDOByShard` файл не пересоздаёт. — покрыто: `GetIPDOByShardTest::testMissingFileThrowsOnFirstOperation`
+- [x] Если файл существует, но не является SQLite-базой (например, случайные байты), метод возвращает объект, а первый запрос, читающий содержимое базы (например, `SELECT` из `items` или `sqlite_master`), выбрасывает `IPDOException`. — покрыто: `GetIPDOByShardTest::testCorruptFileThrowsOnQuery`
+- [x] Для шарда с пустой схемой возвращённый SQLite корректен: запрос к `sqlite_master` успешен, пользовательских таблиц нет. — покрыто: `GetIPDOByShardTest::testEmptySchemaProducesValidSQLite`
+- [x] Закрытие возвращённого объекта (`close`) не влияет на реестр и другие соединения. — покрыто: `GetIPDOByShardTest::testCloseDoesNotAffectOtherInstances`
+- [x] Метод не меняет состояние аренды шарда. — покрыто: `GetIPDOByShardTest::testDoesNotChangeStateOrCreateFiles`
+- [x] Изменения, внесённые через возвращённый объект, сохраняются на диске и видны после повторного получения объекта. — покрыто: `GetIPDOByShardTest::testChangesPersistToDisk`

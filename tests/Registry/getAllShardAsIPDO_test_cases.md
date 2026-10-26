@@ -1,0 +1,12 @@
+- [x] Возвращает `\Generator`. — покрыто: `GetAllShardAsIPDOTest::testReturnsGenerator`
+- [x] Для пустого реестра генератор не выдаёт ни одной пары. — покрыто: `GetAllShardAsIPDOTest::testEmptyRegistryYieldsNothing`
+- [x] Для `N` шардов выдаёт ровно `N` пар; ключи — `id` шардов, значения — объекты `IPDOSQLite`. — покрыто: `GetAllShardAsIPDOTest::testYieldsIdToIPDOPairs`
+- [x] Для каждого значения `getMainFile()` указывает на `baseDir/{id}.sqlite`; схема из `schemaSql` доступна. — покрыто: `GetAllShardAsIPDOTest::testEachIPDOPointsToShardFileWithSchema`
+- [x] Записи в разных шардах изолированы: вставка через первый `IPDOSQLite` не появляется во втором. — покрыто: `GetAllShardAsIPDOTest::testShardsAreIsolated`
+- [x] В результат входят шарды в любом состоянии аренды. — покрыто: `GetAllShardAsIPDOTest::testIncludesShardsInAnyRentState`
+- [x] Генератор ленивый: шард, добавленный до первого обращения, попадает в результат; добавленный после начала итерации — нет. — покрыто: `GetAllShardAsIPDOTest::testLaziness`
+- [x] Если файл шарда удалён, пара всё равно выдаётся; первая операция с полученным `IPDOSQLite` выбрасывает `IPDOException`. — покрыто: `GetAllShardAsIPDOTest::testDeletedShardFileThrowsOnOperation`
+- [x] Каждый вызов создаёт новый объект `IPDOSQLite`; соединение не открывается до первого запроса. — покрыто: `GetAllShardAsIPDOTest::testEachCallReturnsFreshLazyInstances`
+- [x] Закрытие одного полученного объекта не влияет на другие. — покрыто: `GetAllShardAsIPDOTest::testCloseDoesNotAffectOthers`
+- [x] Порядок пар соответствует `getAllShards` и не гарантирован. — покрыто: `GetAllShardAsIPDOTest::testKeySetMatchesAllShardIds`
+- [x] Метод не меняет состояние аренды и не создаёт файлы. — покрыто: `GetAllShardAsIPDOTest::testDoesNotChangeStateOrCreateFiles`

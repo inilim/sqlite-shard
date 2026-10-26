@@ -1,0 +1,16 @@
+- [x] Для только что созданного свободного шарда возвращает `-1`. — покрыто: `LeftTimeUntilReleaseTest::testFreeShardReturnsMinusOne`
+- [x] Для освобождённого шарда возвращает `-1`. — покрыто: `LeftTimeUntilReleaseTest::testReleasedShardReturnsMinusOne`
+- [x] Для неактивного шарда с `updated_at` в будущем возвращает `-1`. — покрыто: `LeftTimeUntilReleaseTest::testInactiveShardWithFutureTimestampReturnsMinusOne`
+- [x] Для только что арендованного шарда возвращает значение от `rent_timeout - 1` до `rent_timeout` включительно. — покрыто: `LeftTimeUntilReleaseTest::testFreshlyRentedReturnsAboutRentTimeout`
+- [x] Для активного шарда с `updated_at` `10` секунд назад и таймаутом `30` возвращает примерно `20` (допуск 1–2 секунды). — покрыто: `LeftTimeUntilReleaseTest::testActiveTenSecondsAgoReturnsTwenty`
+- [x] Для активного шарда с `updated_at` ровно `time() - rent_timeout` возвращает `0`. — покрыто: `LeftTimeUntilReleaseTest::testBoundaryReturnsZero`
+- [x] Для активного шарда с `updated_at` раньше границы возвращает `0`, а не отрицательное число. — покрыто: `LeftTimeUntilReleaseTest::testExpiredActiveReturnsZero`
+- [x] Для активного шарда с `updated_at` в будущем возвращает значение больше `rent_timeout`; верхней границы у результата нет. — покрыто: `LeftTimeUntilReleaseTest::testActiveWithFutureTimestampReturnsMoreThanTimeout`
+- [x] Для несуществующего шарда выбрасывает `ShardNotFoundException`. — покрыто: `LeftTimeUntilReleaseTest::testNonexistentShardThrows`
+- [x] Изменение `rent_timeout` сразу меняет результат: при `updated_at` `10` секунд назад и таймауте `30` — около `20`; после `setRentTimeout(10)` — `0`; после `setRentTimeout(300)` — около `290`. — покрыто: `LeftTimeUntilReleaseTest::testChangingRentTimeoutChangesResult`
+- [x] После успешного `heartbeat` возвращает примерно `rent_timeout`; после успешного `heartbeat_m2` с продлением — также примерно `rent_timeout`. — покрыто: `LeftTimeUntilReleaseTest::testHeartbeatResetsLeftTime`
+- [x] Если `heartbeat_m2` не продлевал аренду, остаток не сбрасывается, а уменьшается на прошедшее время. — покрыто: `LeftTimeUntilReleaseTest::testHeartbeatM2WithoutRenewalKeepsLeftTime`
+- [x] После повторного `rent` остаток снова примерно равен `rent_timeout`. — покрыто: `LeftTimeUntilReleaseTest::testRentAgainResetsLeftTime`
+- [x] Отсутствие файла шарда не влияет на результат. — покрыто: `LeftTimeUntilReleaseTest::testMissingFileDoesNotAffectResult`
+- [x] `minSecHeartbeat` не влияет на результат. — покрыто: `LeftTimeUntilReleaseTest::testMinSecHeartbeatDoesNotAffectLeftTime`
+- [x] Всегда возвращает `int`; допустимые значения — `-1` либо число не меньше `0`. — покрыто: `LeftTimeUntilReleaseTest::testAlwaysReturnsInt`

@@ -1,0 +1,10 @@
+- [x] После `create()` с `minShards = 5` метод возвращает 5 шардов. — покрыто: `GetAllShardsTest::testReturnsAllShardsAfterCreate`
+- [x] После `createNewShards(2)` метод возвращает 7 шардов; два новых присутствуют в результате. — покрыто: `GetAllShardsTest::testIncludesNewlyCreatedShards`
+- [x] Все элементы — объекты `Shard`; их `id` соответствуют созданным, а `reg` указывает на текущий `Registry`. — покрыто: `GetAllShardsTest::testEachElementIsShardReferencingCurrentRegistry`
+- [x] Метод возвращает шарды в любом состоянии: свободные, занятые, просроченные и освобождённые. — покрыто: `GetAllShardsTest::testReturnsShardsInAnyState`
+- [x] Ключи возвращаемого массива — последовательные целые числа от `0` до `N - 1`. — покрыто: `GetAllShardsTest::testKeysAreSequentialIntegers`
+- [x] Если в таблице нет записей (подготовка повреждённого/пустого реестра), метод возвращает пустой массив. — покрыто: `GetAllShardsTest::testEmptyRegistryReturnsEmptyArray`
+- [x] Порядок элементов не гарантирован; тесты должны сравнивать наборы `id`, а не последовательность. — покрыто: `GetAllShardsTest::testOrderIsNotGuaranteed`
+- [x] Два последовательных вызова возвращают разные объекты `Shard` с одинаковыми наборами `id`. — покрыто: `GetAllShardsTest::testEachCallReturnsNewShardObjects`
+- [x] Шард, у которого удалён файл, но осталась запись, всё равно присутствует в результате. — покрыто: `GetAllShardsTest::testShardWithMissingFileIsStillReturned`
+- [x] Метод не меняет состояние аренды, количество шардов и файлы. — покрыто: `GetAllShardsTest::testDoesNotChangeState`
