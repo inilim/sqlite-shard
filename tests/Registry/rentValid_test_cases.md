@@ -5,11 +5,12 @@
 - [x] Для свежего активного шарда возвращает `true`. — покрыто: `RentValidTest::testActiveWithCurrentTimestampReturnsTrue`
 - [x] Для активного шарда с `updated_at` ровно `time() - rent_timeout` возвращает `false` (граница `>`). — покрыто: `RentValidTest::testActiveOnTimeoutBoundaryReturnsFalse`
 - [x] Для активного шарда с заметно более старым `updated_at` возвращает `false`. — покрыто: `RentValidTest::testExpiredActiveReturnsFalse`
-- [x] Для несуществующего шарда возвращает `false` и не выбрасывает исключение; это отличие от `isFree`, `leftTimeUntilRelease`, `heartbeat` и `release`. — покрыто: `RentValidTest::testNonexistentShardReturnsFalseWithoutThrowing`
+- [x] Для несуществующего шарда выбрасывает `ShardNotFoundException` (как `isFree`, `leftTimeUntilRelease`, `heartbeat`, `release` — все они проходят через `checkShard`), а не возвращает `false`; сообщение содержит `id` отсутствующего шарда. — покрыто: `RentValidTest::testNonexistentShardThrowsShardNotFoundException`
 - [x] Отсутствие файла шарда не влияет на результат. — покрыто: `RentValidTest::testMissingFileDoesNotAffectResult`
 - [x] После успешного `heartbeat` возвращает `true`. — покрыто: `RentValidTest::testHeartbeatKeepsRentValid`
 - [x] После истечения аренды (например, `rent_timeout = 1` и пауза 2 секунды) возвращает `false`. — покрыто: `RentValidTest::testLeaseExpirationMakesRentInvalid`
-- [x] Увеличение таймаута может вернуть `true` для активного шарда, который был просрочен: при `updated_at` `35` секунд назад `rentValid` сначала `false`, после `setRentTimeout(60)` — `true`. — покрыто: `RentValidTest::testIncreasingRentTimeoutMakesRentValid`
+- [x] Увеличение таймаута делает активный шард, у которого `updated_at` был `35` секунд назад (просрочен при таймауте 30), снова валидным: после `setRentTimeout(60)` `rentValid` возвращает `true`. Порядок «сначала false, потом `setRentTimeout`, потом true» невозможен: `rentValid` при неудаче очищает `ownerToken` шарда, поэтому первый провал сжигает токен; проверяется однократный вызов после повышения таймаута. — покрыто: `RentValidTest::testIncreasingRentTimeoutMakesRentValid`
 - [x] Уменьшение таймаута может вернуть `false`: при `updated_at` `20` секунд назад и таймауте `30` — `true`, после `setRentTimeout(10)` — `false`. — покрыто: `RentValidTest::testDecreasingRentTimeoutMakesRentInvalid`
 - [x] Метод не меняет состояние шарда. — покрыто: `RentValidTest::testDoesNotChangeState`
 - [x] Второй экземпляр `Registry` видит актуальное значение для аренды, сделанной первым. — покрыто: `RentValidTest::testSecondInstanceSeesUpdatedState`
+- [x] Чужой `owner_token` после перехвата аренды: старый владелец получает `false` (`owner_token` не совпадает с БД), повторный вызов — тоже `false` (после первой неудачи локальный токен очищен); при этом `rentValid` нового владельца — `true`, `isFree` нового владельца — `false`. — покрыто: `RentValidTest::testRentValidByStaleOwnerAfterHijackReturnsFalse`
