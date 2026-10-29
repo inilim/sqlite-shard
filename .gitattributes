@@ -1,9 +1,10 @@
 /tests export-ignore
 /.git* export-ignore
-/.sandbox* export-ignore
 /tools export-ignore
+/bench export-ignore
 
 /todo export-ignore
 /phpunit.xml export-ignore
 /phpstan.neon export-ignore
 /map.md export-ignore
+/readme.md export-ignore
