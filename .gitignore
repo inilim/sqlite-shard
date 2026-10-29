@@ -4,3 +4,4 @@
 /.phpunit.*
 /.sandbox
 /.aicoder
+/bench/tmp
