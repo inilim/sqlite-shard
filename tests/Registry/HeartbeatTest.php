@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Inilim\Test\Registry;
 
+use Inilim\IPDO\IPDO;
 use Inilim\IPDO\IPDOSQLite;
 use Inilim\SqliteShard\CreateConfig;
 use Inilim\SqliteShard\Registry;
 use Inilim\SqliteShard\Shard;
+use Inilim\SqliteShard\ShardNotRentException;
 use Inilim\SqliteShard\ShardNotFoundException;
 use Inilim\SqliteShard\ShardRentLostException;
 use Inilim\Test\TestCase;
@@ -67,7 +69,7 @@ final class HeartbeatTest extends TestCase
         self::assertLessThanOrEqual(30, $reg->leftTimeUntilRelease($shard));
     }
 
-    // Повторный вызов успешен, updated_at продвигается.
+    // Повторный вызов через секунду успешен, updated_at продвигается.
     public function testRepeatedHeartbeatAdvancesTimestamp(): void
     {
         $cfg = new CreateConfig(
@@ -79,6 +81,7 @@ final class HeartbeatTest extends TestCase
         $reg = $this->registerRegistry(Registry::create($cfg));
         $shard = $reg->getAllShards()[0];
         $reg->rent($shard);
+
         $ipdo = new IPDOSQLite($cfg->ptfRegistry);
         try {
             $ipdo->exec('UPDATE shards SET updated_at = {t} WHERE id = {id}', ['t' => \time() - 5, 'id' => $shard->id]);
@@ -87,14 +90,19 @@ final class HeartbeatTest extends TestCase
         }
 
         $reg->heartbeat($shard);
-        $reg->heartbeat($shard);
+        $first = $this->updatedAt($cfg->ptfRegistry, $shard->id);
 
+        \sleep(1);
+        $reg->heartbeat($shard);
+        $second = $this->updatedAt($cfg->ptfRegistry, $shard->id);
+
+        self::assertGreaterThan($first, $second);
         self::assertGreaterThanOrEqual(28, $reg->leftTimeUntilRelease($shard));
         self::assertLessThanOrEqual(30, $reg->leftTimeUntilRelease($shard));
     }
 
-    // Свободный шард → ShardRentLostException; состояние не меняется.
-    public function testFreeShardThrowsRentLost(): void
+    // Свободный шард → ShardNotRentException; состояние не меняется.
+    public function testFreeShardThrowsNotRent(): void
     {
         $reg = $this->registerRegistry(Registry::create(new CreateConfig(
             baseDir: $this->tmpDir,
@@ -105,15 +113,15 @@ final class HeartbeatTest extends TestCase
 
         try {
             $reg->heartbeat($shard);
-            self::fail('ShardRentLostException expected');
-        } catch (ShardRentLostException) {
+            self::fail('ShardNotRentException expected');
+        } catch (ShardNotRentException) {
             self::assertTrue($reg->isFree($shard));
             self::assertSame(-1, $reg->leftTimeUntilRelease($shard));
         }
     }
 
     // Просроченный активный (ago(40)) → ShardRentLostException; остаётся
-    // активным и просроченным.
+    // активным и просроченным, updated_at не меняется.
     public function testExpiredActiveThrowsRentLost(): void
     {
         $cfg = new CreateConfig(
@@ -125,9 +133,15 @@ final class HeartbeatTest extends TestCase
         $reg = $this->registerRegistry(Registry::create($cfg));
         $shard = $reg->getAllShards()[0];
         $reg->rent($shard);
+
         $ipdo = new IPDOSQLite($cfg->ptfRegistry);
         try {
             $ipdo->exec('UPDATE shards SET updated_at = {t} WHERE id = {id}', ['t' => \time() - 40, 'id' => $shard->id]);
+            $before = $ipdo->exec(
+                'SELECT active, updated_at FROM shards WHERE id = {id}',
+                ['id' => $shard->id],
+                IPDO::FETCH_ONCE_NUM
+            );
         } finally {
             $ipdo->close();
         }
@@ -138,6 +152,20 @@ final class HeartbeatTest extends TestCase
         } catch (ShardRentLostException) {
             self::assertFalse($reg->rentValid($shard));
             self::assertSame(0, $reg->leftTimeUntilRelease($shard));
+
+            $ipdo = new IPDOSQLite($cfg->ptfRegistry);
+            try {
+                $after = $ipdo->exec(
+                    'SELECT active, updated_at FROM shards WHERE id = {id}',
+                    ['id' => $shard->id],
+                    IPDO::FETCH_ONCE_NUM
+                );
+            } finally {
+                $ipdo->close();
+            }
+
+            self::assertSame((int) $before[0], (int) $after[0]);
+            self::assertSame((int) $before[1], (int) $after[1]);
         }
     }
 
@@ -154,8 +182,8 @@ final class HeartbeatTest extends TestCase
         $reg->heartbeat(new Shard('no-such', $reg));
     }
 
-    // Освобождённый шард → ShardRentLostException.
-    public function testReleasedShardThrowsRentLost(): void
+    // Освобождённый шард → ShardNotRentException.
+    public function testReleasedShardThrowsNotRent(): void
     {
         $reg = $this->registerRegistry(Registry::create(new CreateConfig(
             baseDir: $this->tmpDir,
@@ -166,7 +194,7 @@ final class HeartbeatTest extends TestCase
         $reg->rent($shard);
         $reg->release($shard);
 
-        $this->expectException(ShardRentLostException::class);
+        $this->expectException(ShardNotRentException::class);
         $reg->heartbeat($shard);
     }
 
@@ -275,8 +303,8 @@ final class HeartbeatTest extends TestCase
 
         try {
             $reg->heartbeat($free);
-            self::fail('ShardRentLostException expected');
-        } catch (ShardRentLostException) {
+            self::fail('ShardNotRentException expected');
+        } catch (ShardNotRentException) {
         }
 
         self::assertTrue($reg->isFree($free));
@@ -284,15 +312,25 @@ final class HeartbeatTest extends TestCase
         self::assertFalse($reg->isFree($busy));
     }
 
-    // Сообщение исключения содержит id шарда.
+    // Сообщение ShardRentLostException содержит id шарда.
     public function testExceptionMessageContainsShardId(): void
     {
-        $reg = $this->registerRegistry(Registry::create(new CreateConfig(
+        $cfg = new CreateConfig(
             baseDir: $this->tmpDir,
             schemaSql: ['CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)'],
             name: 'test',
-        )));
+            rentTimeout: 30,
+        );
+        $reg = $this->registerRegistry(Registry::create($cfg));
         $shard = $reg->getAllShards()[0];
+        $reg->rent($shard);
+
+        $ipdo = new IPDOSQLite($cfg->ptfRegistry);
+        try {
+            $ipdo->exec('UPDATE shards SET updated_at = {t} WHERE id = {id}', ['t' => \time() - 40, 'id' => $shard->id]);
+        } finally {
+            $ipdo->close();
+        }
 
         try {
             $reg->heartbeat($shard);
@@ -318,5 +356,20 @@ final class HeartbeatTest extends TestCase
 
         self::assertSame($reg, $result);
         self::assertTrue($reg->rentValid($shard));
+    }
+
+    private function updatedAt(string $ptfRegistry, string $shardId): int
+    {
+        $ipdo = new IPDOSQLite($ptfRegistry);
+        try {
+            $row = $ipdo->exec(
+                'SELECT updated_at FROM shards WHERE id = {id}',
+                ['id' => $shardId],
+                IPDO::FETCH_ONCE_NUM
+            );
+            return (int) $row[0];
+        } finally {
+            $ipdo->close();
+        }
     }
 }
