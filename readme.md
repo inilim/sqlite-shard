@@ -12,7 +12,7 @@
 ## Установка
 
 ```bash
-composer require inilim/sqlite-shard:0.0.*
+composer require inilim/sqlite-shard
 ```
 
 ## Быстрый старт
