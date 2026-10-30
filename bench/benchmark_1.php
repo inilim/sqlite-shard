@@ -23,6 +23,7 @@ use Inilim\Parallel\PoolFlow;
 use Inilim\SqliteShard\CreateConfig;
 use Inilim\SqliteShard\Registry;
 use Inilim\Tool\File;
+use Inilim\Tool\FS;
 use Inilim\Tool\Path;
 use Inilim\Tool\Time;
 use Symfony\Component\Finder\Finder;
@@ -43,7 +44,7 @@ if ($threads < 1 || $durationSec < 1) {
 $vendorAutoload = Path::normalize(Path::realPath(__DIR__ . '/../vendor/autoload.php'));
 $tmpDir = Path::normalize(__DIR__ . '/tmp');
 
-if (!\is_dir($tmpDir) && !\mkdir($tmpDir, 0777, true) && !\is_dir($tmpDir)) {
+if (!FS::isDir($tmpDir) && !\mkdir($tmpDir, 0777, true) && !FS::isDir($tmpDir)) {
     fwrite(STDERR, "Cannot create directory: {$tmpDir}\n");
     exit(1);
 }
@@ -55,14 +56,14 @@ $len_line = 100;
 
 function clean_dir(string $dir): void
 {
-    if (!\is_dir($dir)) {
+    if (!FS::isDir($dir)) {
         \mkdir($dir, 0777, true);
         return;
     }
-    foreach (new Finder()->in($dir)->files()->name('*.sqlite') as $spl) {
+    foreach (new Finder()->in($dir)->files()->name('*.sqlite*') as $spl) {
         $ptf = $spl->getRealPath();
         unset($spl);
-        @\unlink($ptf);
+        FS::unlink($ptf);
     }
 }
 
