@@ -408,9 +408,12 @@ final class RentFreeTest extends TestCase
         self::assertStringStartsWith(ShardNotFreeException::class, $errors[0]);
         self::assertStringContainsString('There are no free shards', $errors[0]);
 
-        // итоговое состояние: единственный шард занят победителем
+        // итоговое состояние: единственный шард занят победителем.
+        // rentValid() проверяет ownerToken в объекте Shard, а в текущем
+        // процессе объекта-победителя нет, поэтому проверяем состояние в БД.
+        self::assertSame(1, $regA->getCountShards());
         $shard = new Shard($winners[0], $regA);
-        self::assertTrue($regA->rentValid($shard));
+        self::assertFalse($regA->isFree($shard));
         self::assertCount(0, $regA->getFreeShards());
     }
 
