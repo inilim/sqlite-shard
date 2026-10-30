@@ -402,6 +402,7 @@ class Registry
      */
     function heartbeat_m2(Shard $shard): self
     {
+        $this->checkShard($shard);
         if (null === $shard->ownerToken) {
             throw new ShardNotRentException($shard->id);
         }

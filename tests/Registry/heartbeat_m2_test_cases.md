@@ -7,7 +7,7 @@
 - [x] Для освобождённого шарда выбрасывает `ShardRentLostException`. — покрыто: `HeartbeatM2Test::testReleasedShardThrowsRentLost`
 - [x] Для несуществующего шарда выбрасывает `ShardNotFoundException`. — покрыто: `HeartbeatM2Test::testNonexistentShardThrowsNotFound`
 - [x] После `setMinSecHeartbeat(5)`: при остатке `20` продления нет; при остатке `3` продление есть; при остатке ровно `5` продление есть. — покрыто: `HeartbeatM2Test::testCustomThreshold`
-- [] После `setMinSecHeartbeat(1)`: при остатке `5` продления нет; при остатке ровно `1` продление есть. — НЕ покрыто: нет теста с порогом `1`. Ближайший аналог — `HeartbeatM2Test::testSmallThreshold` с порогом `3` (остаток `5` без продления, остаток `2` с продлением), но кейс с порогом `1` не реализован.
+- [x] После `setMinSecHeartbeat(1)`: при остатке `5` продления нет; при остатке ровно `1` продление есть. — покрыто: `HeartbeatM2Test::testThresholdOne`
 - [x] Значение по умолчанию — `10`: при остатке `20` продления нет, при остатке `5` продление есть. — покрыто: `HeartbeatM2Test::testDefaultThresholdIsTen` + `HeartbeatM2Test::testDoesNotRenewWhenLeftTimeAboveThreshold` + `HeartbeatM2Test::testRenewsWhenLeftTimeBelowThreshold`
 - [x] Если несколько раз вызывать метод при остатке больше порога, аренда не продлевается и через время истекает; затем вызов выбрасывает `ShardRentLostException`. — покрыто: `HeartbeatM2Test::testEventuallyExpiresWithoutRenewal`
 - [x] После успешного продления немедленный повторный вызов не продлевает аренду, потому что при `minSecHeartbeat < rent_timeout` остаток снова больше порога. — покрыто: `HeartbeatM2Test::testNoRenewalAccumulation`

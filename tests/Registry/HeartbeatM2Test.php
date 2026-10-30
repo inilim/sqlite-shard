@@ -278,6 +278,41 @@ final class HeartbeatM2Test extends TestCase
         self::assertLessThanOrEqual(30, $reg->leftTimeUntilRelease($shard));
     }
 
+    // Порог 1: остаток ~5 > 1 — без продления; остаток ровно ~1 — продление.
+    public function testThresholdOne(): void
+    {
+        $cfg = new CreateConfig(
+            baseDir: $this->tmpDir,
+            schemaSql: ['CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)'],
+            name: 'test',
+            rentTimeout: 30,
+        );
+        $reg = $this->registerRegistry(Registry::create($cfg));
+        $reg->setMinSecHeartbeat(1);
+        $shard = $reg->tryRentFree();
+        self::assertNotNull($shard);
+
+        $ipdo = new IPDOSQLite($cfg->ptfRegistry);
+        try {
+            $ipdo->exec('UPDATE shards SET updated_at = {t} WHERE id = {id}', ['t' => \time() - 25, 'id' => $shard->id]);
+        } finally {
+            $ipdo->close();
+        } // остаток ~5 > 1
+        $reg->heartbeat_m2($shard);
+        self::assertGreaterThanOrEqual(3, $reg->leftTimeUntilRelease($shard));
+        self::assertLessThanOrEqual(5, $reg->leftTimeUntilRelease($shard));
+
+        $ipdo = new IPDOSQLite($cfg->ptfRegistry);
+        try {
+            $ipdo->exec('UPDATE shards SET updated_at = {t} WHERE id = {id}', ['t' => \time() - 29, 'id' => $shard->id]);
+        } finally {
+            $ipdo->close();
+        } // остаток ровно ~1 <= 1
+        $reg->heartbeat_m2($shard);
+        self::assertGreaterThanOrEqual(28, $reg->leftTimeUntilRelease($shard));
+        self::assertLessThanOrEqual(30, $reg->leftTimeUntilRelease($shard));
+    }
+
     // Порог по умолчанию — 10: reg->minSecHeartbeat === 10; остаток ~20 — без
     // продления, остаток ~5 — с продлением.
     public function testDefaultThresholdIsTen(): void
