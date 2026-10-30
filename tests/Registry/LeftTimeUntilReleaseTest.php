@@ -365,4 +365,55 @@ final class LeftTimeUntilReleaseTest extends TestCase
         self::assertIsInt($reg->leftTimeUntilRelease($shard));
         self::assertGreaterThanOrEqual(0, $reg->leftTimeUntilRelease($shard));
     }
+
+    // Обёртка Shard::leftTimeUntilRelease() делегирует в Registry и возвращает
+    // корректные значения — как для свободного, так и для арендованного шарда.
+    public function testShardWrapperDelegatesToRegistry(): void
+    {
+        $cfg = new CreateConfig(
+            baseDir: $this->tmpDir,
+            schemaSql: ['CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)'],
+            name: 'test',
+            minShards: 1,
+            rentTimeout: 30,
+        );
+        $reg = $this->registerRegistry(Registry::create($cfg));
+        $shard = $reg->getAllShards()[0];
+
+        // свободный шард → -1 через оба пути
+        self::assertSame(-1, $shard->leftTimeUntilRelease());
+        self::assertSame(-1, $reg->leftTimeUntilRelease($shard));
+
+        $reg->rent($shard);
+
+        $viaShard = $shard->leftTimeUntilRelease();
+        self::assertGreaterThanOrEqual(28, $viaShard);
+        self::assertLessThanOrEqual(30, $viaShard);
+
+        $viaRegistry = $reg->leftTimeUntilRelease($shard);
+        self::assertGreaterThanOrEqual(28, $viaRegistry);
+        self::assertLessThanOrEqual(30, $viaRegistry);
+    }
+
+    // Разные шарды независимы: свободный возвращает -1, арендованный — примерно
+    // rent_timeout, и значения одного шарда не влияют на другой.
+    public function testMultipleShardsAreIndependent(): void
+    {
+        $cfg = new CreateConfig(
+            baseDir: $this->tmpDir,
+            schemaSql: ['CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)'],
+            name: 'test',
+            minShards: 2,
+            rentTimeout: 30,
+        );
+        $reg = $this->registerRegistry(Registry::create($cfg));
+        $shards = $reg->getAllShards();
+        self::assertCount(2, $shards);
+
+        $reg->rent($shards[0]);
+
+        self::assertSame(-1, $reg->leftTimeUntilRelease($shards[1]));
+        self::assertGreaterThanOrEqual(28, $reg->leftTimeUntilRelease($shards[0]));
+        self::assertLessThanOrEqual(30, $reg->leftTimeUntilRelease($shards[0]));
+    }
 }

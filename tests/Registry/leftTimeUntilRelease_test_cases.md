@@ -14,3 +14,5 @@
 - [x] Отсутствие файла шарда не влияет на результат. — покрыто: `LeftTimeUntilReleaseTest::testMissingFileDoesNotAffectResult`
 - [x] `minSecHeartbeat` не влияет на результат. — покрыто: `LeftTimeUntilReleaseTest::testMinSecHeartbeatDoesNotAffectLeftTime`
 - [x] Всегда возвращает `int`; допустимые значения — `-1` либо число не меньше `0`. — покрыто: `LeftTimeUntilReleaseTest::testAlwaysReturnsInt`
+- [x] Обёртка `Shard::leftTimeUntilRelease()` делегирует в `Registry` и возвращает те же значения: `-1` для свободного и примерно `rent_timeout` для арендованного шарда. — покрыто: `LeftTimeUntilReleaseTest::testShardWrapperDelegatesToRegistry`
+- [x] Разные шарды независимы: свободный возвращает `-1`, арендованный — примерно `rent_timeout`. — покрыто: `LeftTimeUntilReleaseTest::testMultipleShardsAreIndependent`
