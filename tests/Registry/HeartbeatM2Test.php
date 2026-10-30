@@ -9,6 +9,7 @@ use Inilim\SqliteShard\CreateConfig;
 use Inilim\SqliteShard\Registry;
 use Inilim\SqliteShard\Shard;
 use Inilim\SqliteShard\ShardNotFoundException;
+use Inilim\SqliteShard\ShardNotRentException;
 use Inilim\SqliteShard\ShardRentLostException;
 use Inilim\Test\TestCase;
 
@@ -122,8 +123,9 @@ final class HeartbeatM2Test extends TestCase
         self::assertLessThanOrEqual(12, $reg->leftTimeUntilRelease($shard));
     }
 
-    // Свободный шард → ShardRentLostException.
-    public function testFreeShardThrowsRentLost(): void
+    // Свободный шард (без owner_token) → ShardNotRentException:
+    // продлевать нечего, потому что аренда никогда не была взята.
+    public function testFreeShardThrowsNotRent(): void
     {
         $reg = $this->registerRegistry(Registry::create(new CreateConfig(
             baseDir: $this->tmpDir,
@@ -132,7 +134,7 @@ final class HeartbeatM2Test extends TestCase
         )));
         $shard = $reg->getAllShards()[0];
 
-        $this->expectException(ShardRentLostException::class);
+        $this->expectException(ShardNotRentException::class);
         $reg->heartbeat_m2($shard);
     }
 
@@ -164,8 +166,9 @@ final class HeartbeatM2Test extends TestCase
         }
     }
 
-    // Освобождённый шард → ShardRentLostException.
-    public function testReleasedShardThrowsRentLost(): void
+    // Освобождённый шард (owner_token сброшен release()) → ShardNotRentException:
+    // у объекта больше нет аренды, продлевать нечего.
+    public function testReleasedShardThrowsNotRent(): void
     {
         $reg = $this->registerRegistry(Registry::create(new CreateConfig(
             baseDir: $this->tmpDir,
@@ -176,7 +179,7 @@ final class HeartbeatM2Test extends TestCase
         $reg->rent($shard);
         $reg->release($shard);
 
-        $this->expectException(ShardRentLostException::class);
+        $this->expectException(ShardNotRentException::class);
         $reg->heartbeat_m2($shard);
     }
 
@@ -450,7 +453,8 @@ final class HeartbeatM2Test extends TestCase
     }
 
     // При неудаче шард не переводится в неактивное (для свободного — остаётся
-    // свободным).
+    // свободным). Свободный шард не имеет owner_token, поэтому heartbeat_m2
+    // выбрасывает ShardNotRentException; состояние шарда не меняется.
     public function testFailureDoesNotDeactivateShard(): void
     {
         $reg = $this->registerRegistry(Registry::create(new CreateConfig(
@@ -462,8 +466,8 @@ final class HeartbeatM2Test extends TestCase
 
         try {
             $reg->heartbeat_m2($shard);
-            self::fail('ShardRentLostException expected');
-        } catch (ShardRentLostException) {
+            self::fail('ShardNotRentException expected');
+        } catch (ShardNotRentException) {
             self::assertTrue($reg->isFree($shard));
             self::assertSame(-1, $reg->leftTimeUntilRelease($shard));
         }

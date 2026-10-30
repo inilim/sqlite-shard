@@ -2,9 +2,9 @@
 - [x] При остатке меньше `minSecHeartbeat` (например, `5` при `10`) продлевает аренду: остаток становится примерно `rent_timeout`. — покрыто: `HeartbeatM2Test::testRenewsWhenLeftTimeBelowThreshold`
 - [x] При остатке ровно `minSecHeartbeat` (`10` при `10`) продлевает аренду (граница `<=`). — покрыто: `HeartbeatM2Test::testRenewsAtExactThreshold`
 - [x] При остатке `11` при `minSecHeartbeat = 10` не продлевает аренду; кейс чувствителен к пересечению секунды и должен выполняться сразу либо с контролем времени. — покрыто: `HeartbeatM2Test::testDoesNotRenewJustAboveThreshold` (остаток ~12)
-- [x] Для свободного шарда (остаток `-1`) выбрасывает `ShardRentLostException`. — покрыто: `HeartbeatM2Test::testFreeShardThrowsRentLost`
+- [x] Для свободного шарда (нет `owner_token`) выбрасывает `ShardNotRentException`: аренда никогда не была взята, продлевать нечего. — покрыто: `HeartbeatM2Test::testFreeShardThrowsNotRent`
 - [x] Для просроченного активного шарда (остаток `0`) выбрасывает `ShardRentLostException`; `updated_at` не меняется. — покрыто: `HeartbeatM2Test::testExpiredActiveThrowsRentLost`
-- [x] Для освобождённого шарда выбрасывает `ShardRentLostException`. — покрыто: `HeartbeatM2Test::testReleasedShardThrowsRentLost`
+- [x] Для освобождённого шарда (владелец вызвал `release()`, `owner_token` сброшен) выбрасывает `ShardNotRentException`. — покрыто: `HeartbeatM2Test::testReleasedShardThrowsNotRent`
 - [x] Для несуществующего шарда выбрасывает `ShardNotFoundException`. — покрыто: `HeartbeatM2Test::testNonexistentShardThrowsNotFound`
 - [x] После `setMinSecHeartbeat(5)`: при остатке `20` продления нет; при остатке `3` продление есть; при остатке ровно `5` продление есть. — покрыто: `HeartbeatM2Test::testCustomThreshold`
 - [x] После `setMinSecHeartbeat(1)`: при остатке `5` продления нет; при остатке ровно `1` продление есть. — покрыто: `HeartbeatM2Test::testThresholdOne`
