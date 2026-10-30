@@ -21,6 +21,9 @@
         }
     ],
     "scripts": {
+        "phpunit": [
+            "php vendor/bin/phpunit"
+        ],
         "tests": [
             "php vendor/bin/phpunit tests"
         ],
