@@ -28,5 +28,3 @@
 - `setMinSecHeartbeat`, `setRentTimeout`, `setMinShards`, `applyConfig`, `getName`, `createNewShards`, `createNewShard`, `getAllShards`, `getCountShards`, `getFreeShards`, `existsShard`, `isFree`, `rent`, `tryRent`, `rentFree`, `tryRentFree`, `getIPDOByShard`, `release`, `leftTimeUntilRelease`, `rentValid`, `heartbeat`, `heartbeat_m2`, `getAllShardAsIPDO`, `getAllShardAsPtf`, `discover`, `discoverFromCreateConfig`, `create`, `createOrDiscover`
 
 Конструктор и защищённые методы в область тестирования не входят.
-
-Тест-кейсы основаны на коммите [fbba7dcac898f26ffc6884d0219ea83815a467ec], если коммит отличается, следует проверить изменения которые затрагивают публичный api, если изменения есть нужно обновить тест-кейсы под это изменения.
