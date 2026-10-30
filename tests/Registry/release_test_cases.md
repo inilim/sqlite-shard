@@ -4,9 +4,9 @@
 - [x] Для просроченного активного шарда переводит его в неактивное состояние и обновляет `updated_at` текущим временем; `leftTimeUntilRelease` становится `-1`. — покрыто: `ReleaseTest::testReleaseOfExpiredActiveShard`
 - [x] Для несуществующего шарда выбрасывает `ShardNotFoundException`. — покрыто: `ReleaseTest::testNonexistentShardThrows`
 - [x] Количество шардов не меняется; `existsShard` продолжает возвращать `true`; файл шарда остаётся. — покрыто: `ReleaseTest::testDoesNotRemoveShard`
-- [x] Освобождённый шард можно снова арендовать через `rent` или `rentFree`. — покрыто: `ReleaseTest::testReleasedShardCanBeRentedAgain` (через `rent`), `RentFreeTest::testRentFreeReturnsReleasedShard` (через `rentFree`)
+- [x] Освобождённый шард можно снова арендовать через `rent` или `rentFree`. — покрыто: `ReleaseTest::testReleasedShardCanBeRentedAgain` (через `rent`), `ReleaseTest::testReleasedShardCanBeRentedAgainViaRentFree` (через `rentFree`)
 - [x] Повторный `release` того же шарда не выбрасывает исключение; второй вызов не меняет `updated_at`, потому что шард уже неактивен. — покрыто: `ReleaseTest::testRepeatedReleaseIsNoOp`
-- [x] После `release` вызов `heartbeat` и `heartbeat_m2` для этого шарда выбрасывает `ShardRentLostException`. — покрыто: `ReleaseTest::testHeartbeatAfterReleaseThrowsRentLost`
+- [x] После `release` вызов `heartbeat` и `heartbeat_m2` для этого шарда выбрасывает `ShardNotRentException` (объект шарда больше не держит токен аренды). — покрыто: `ReleaseTest::testHeartbeatAfterReleaseThrowsNotRentException`
 - [x] Освобождение одного шарда не меняет состояние и `updated_at` других шардов. — покрыто: `ReleaseTest::testOtherActiveShardsUntouched`
 - [x] Отсутствие файла шарда не мешает освобождению: метод работает с записью реестра. — покрыто: `ReleaseTest::testMissingFileDoesNotPreventRelease`
 - [x] Если шард неактивен, но `updated_at` в будущем, повторный `release` оставляет его неактивным и не меняет `updated_at`. — покрыто: `ReleaseTest::testReleaseOfInactiveFutureShardKeepsItInactive`

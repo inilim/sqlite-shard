@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace Inilim\Test\Registry;
 
+use Inilim\IPDO\IPDO;
 use Inilim\IPDO\IPDOSQLite;
 use Inilim\SqliteShard\CreateConfig;
 use Inilim\SqliteShard\Registry;
 use Inilim\SqliteShard\Shard;
 use Inilim\SqliteShard\ShardNotFoundException;
-use Inilim\SqliteShard\ShardRentLostException;
+use Inilim\SqliteShard\ShardNotRentException;
 use Inilim\Test\TestCase;
 use Inilim\Tool\Path;
 
@@ -21,23 +22,30 @@ use Inilim\Tool\Path;
 final class ReleaseTest extends TestCase
 {
     // Для арендованного шарда возвращает тот же Registry; шард становится
-    // свободным и неактивным.
+    // свободным и неактивным, updated_at обновляется текущим временем.
     public function testReleasedBusyShardBecomesFree(): void
     {
-        $reg = $this->registerRegistry(Registry::create(new CreateConfig(
+        $cfg = new CreateConfig(
             baseDir: $this->tmpDir,
             schemaSql: ['CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)'],
             name: 'test',
-        )));
+        );
+        $reg = $this->registerRegistry(Registry::create($cfg));
         $shard = $reg->getAllShards()[0];
         $reg->rent($shard);
 
+        $before = \time();
         $result = $reg->release($shard);
+        $after = \time();
 
         self::assertSame($reg, $result);
         self::assertTrue($reg->isFree($shard));
         self::assertFalse($reg->rentValid($shard));
         self::assertSame(-1, $reg->leftTimeUntilRelease($shard));
+
+        $updatedAt = $this->fetchUpdatedAt($cfg->ptfRegistry, $shard->id);
+        self::assertGreaterThanOrEqual($before, $updatedAt);
+        self::assertLessThanOrEqual($after, $updatedAt);
     }
 
     // updated_at обновляется при освобождении активного: освобождённый шард
@@ -187,7 +195,31 @@ final class ReleaseTest extends TestCase
         self::assertTrue($reg->rentValid($shard));
     }
 
-    // Повторный release не бросает и не меняет updated_at.
+    // Освобождённый шард можно снова получить через rentFree, если он
+    // единственный свободный.
+    public function testReleasedShardCanBeRentedAgainViaRentFree(): void
+    {
+        $reg = $this->registerRegistry(Registry::create(new CreateConfig(
+            baseDir: $this->tmpDir,
+            schemaSql: ['CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)'],
+            name: 'test',
+        )));
+        $all = $reg->getAllShards();
+        $target = $all[0];
+
+        foreach ($all as $shard) {
+            $reg->rent($shard);
+        }
+        $reg->release($target);
+
+        $rented = $reg->rentFree();
+
+        self::assertSame($target->id, $rented->id);
+        self::assertTrue($reg->rentValid($rented));
+    }
+
+    // Повторный release не бросает и не меняет updated_at после первого
+    // освобождения активного шарда.
     public function testRepeatedReleaseIsNoOp(): void
     {
         $cfg = new CreateConfig(
@@ -197,31 +229,30 @@ final class ReleaseTest extends TestCase
             rentTimeout: 30,
         );
         $reg = $this->registerRegistry(Registry::create($cfg));
-        $all = $reg->getAllShards();
+        $shard = $reg->getAllShards()[0];
+        $reg->rent($shard);
 
         $ipdo = new IPDOSQLite($cfg->ptfRegistry);
         try {
-            $ipdo->exec('UPDATE shards SET updated_at = {t} WHERE id = {id}', ['t' => \time() - 100, 'id' => $all[0]->id]);
-        } finally {
-            $ipdo->close();
-        }
-        $ipdo = new IPDOSQLite($cfg->ptfRegistry);
-        try {
-            $ipdo->exec('UPDATE shards SET updated_at = {t} WHERE id = {id}', ['t' => \time() - 50, 'id' => $all[1]->id]);
+            $ipdo->exec('UPDATE shards SET updated_at = {t} WHERE id = {id}', ['t' => \time() - 100, 'id' => $shard->id]);
         } finally {
             $ipdo->close();
         }
 
-        $reg->release($all[0]);
-        $reg->release($all[0]);
+        $reg->release($shard);
+        $updatedAtAfterFirstRelease = $this->fetchUpdatedAt($cfg->ptfRegistry, $shard->id);
 
-        $free = \array_map(static fn(Shard $s): string => $s->id, $reg->getFreeShards());
-        self::assertSame($all[0]->id, $free[0]); // самый старый — по-прежнему первый
-        self::assertSame($all[1]->id, $free[1]);
+        $result = $reg->release($shard);
+        $updatedAtAfterSecondRelease = $this->fetchUpdatedAt($cfg->ptfRegistry, $shard->id);
+
+        self::assertSame($reg, $result);
+        self::assertSame($updatedAtAfterFirstRelease, $updatedAtAfterSecondRelease);
+        self::assertTrue($reg->isFree($shard));
     }
 
-    // После release heartbeat и heartbeat_m2 бросают ShardRentLostException.
-    public function testHeartbeatAfterReleaseThrowsRentLost(): void
+    // После release heartbeat и heartbeat_m2 бросают ShardNotRentException:
+    // объект шарда уже не держит токен аренды.
+    public function testHeartbeatAfterReleaseThrowsNotRentException(): void
     {
         $reg = $this->registerRegistry(Registry::create(new CreateConfig(
             baseDir: $this->tmpDir,
@@ -236,11 +267,11 @@ final class ReleaseTest extends TestCase
             $thrown = false;
             try {
                 $reg->{$method}($shard);
-                self::fail(ucfirst($method) . ' should throw ShardRentLostException');
-            } catch (ShardRentLostException) {
+                self::fail(ucfirst($method) . ' should throw ShardNotRentException');
+            } catch (ShardNotRentException) {
                 $thrown = true;
             }
-            self::assertTrue($thrown, ucfirst($method) . ' should throw ShardRentLostException');
+            self::assertTrue($thrown, ucfirst($method) . ' should throw ShardNotRentException');
         }
     }
 
@@ -282,7 +313,8 @@ final class ReleaseTest extends TestCase
         self::assertTrue($reg->isFree($shard));
     }
 
-    // Неактивный шард с updated_at в будущем остаётся неактивным после release.
+    // Неактивный шард с updated_at в будущем остаётся неактивным после release
+    // и не меняет updated_at.
     public function testReleaseOfInactiveFutureShardKeepsItInactive(): void
     {
         $cfg = new CreateConfig(
@@ -295,9 +327,10 @@ final class ReleaseTest extends TestCase
         $shard = $reg->getAllShards()[0];
         $reg->rent($shard);
         $reg->release($shard);
+        $future = \time() + 3600;
         $ipdo = new IPDOSQLite($cfg->ptfRegistry);
         try {
-            $ipdo->exec('UPDATE shards SET updated_at = {t} WHERE id = {id}', ['t' => \time() + 3600, 'id' => $shard->id]);
+            $ipdo->exec('UPDATE shards SET updated_at = {t} WHERE id = {id}', ['t' => $future, 'id' => $shard->id]);
         } finally {
             $ipdo->close();
         }
@@ -306,6 +339,7 @@ final class ReleaseTest extends TestCase
 
         self::assertSame(-1, $reg->leftTimeUntilRelease($shard));
         self::assertTrue($reg->isFree($shard));
+        self::assertSame($future, $this->fetchUpdatedAt($cfg->ptfRegistry, $shard->id));
     }
 
     // Цепочка release->release не бросает и возвращает Registry.
@@ -322,5 +356,21 @@ final class ReleaseTest extends TestCase
         $result = $reg->release($shard)->release($shard);
 
         self::assertSame($reg, $result);
+    }
+
+    private function fetchUpdatedAt(string $registryPtf, string $shardId): int
+    {
+        $ipdo = new IPDOSQLite($registryPtf);
+        try {
+            $record = $ipdo->exec(
+                'SELECT updated_at FROM shards WHERE id = {id}',
+                ['id' => $shardId],
+                IPDO::FETCH_ONCE_NUM
+            );
+        } finally {
+            $ipdo->close();
+        }
+
+        return (int)$record[0];
     }
 }
