@@ -8,8 +8,8 @@
 - [x] Порядок результата — по возрастанию `updated_at`: при трёх свободных шардах с `updated_at` `50`, `40` и `30` секунд назад порядок именно такой. При одинаковых `updated_at` порядок не гарантирован. — покрыто: `GetFreeShardsTest::testOrderedByUpdatedAtAscending`
 - [x] Все элементы — `Shard`; `reg` указывает на текущий `Registry`; ключи последовательные. — покрыто: `GetFreeShardsTest::testElementsAreShardsOfCurrentRegistry`
 - [x] Для пустого реестра возвращается пустой массив. — покрыто: `GetFreeShardsTest::testEmptyRegistryReturnsEmptyArray`
-- [x] Метод не меняет состояние: не арендует, не освобождает и не обновляет `updated_at`. — покрыто: `GetFreeShardsTest::testDoesNotChangeState`
-- [x] Изменение `rent_timeout` сразу меняет состав результата: активный шард с `updated_at` `20` секунд назад при таймауте `30` отсутствует, после `setRentTimeout(10)` присутствует, после возврата `30` снова отсутствует. — покрыто: `GetFreeShardsTest::testChangingRentTimeoutChangesResult`
+- [x] Метод не меняет состояние: не арендует, не освобождает и не обновляет записи в таблицах `shards` и `kv`. — покрыто: `GetFreeShardsTest::testDoesNotChangeState`
+- [x] Изменение `rent_timeout` сразу меняет состав результата: активный шард с `updated_at` `30` секунд назад при таймауте `120` отсутствует, после `setRentTimeout(10)` присутствует, после возврата `120` снова отсутствует. — покрыто: `GetFreeShardsTest::testChangingRentTimeoutChangesResult`
 - [x] После `heartbeat` свежий шард остаётся исключённым; после `rent` исключён; после `release` снова включён. — покрыто: `GetFreeShardsTest::testHeartbeatRentReleaseCycle`
 - [x] Отсутствие файла шарда не влияет на результат: учитывается только запись реестра. — покрыто: `GetFreeShardsTest::testMissingFileDoesNotAffectResult`
 - [x] При очень большом `rent_timeout` (например, `PHP_INT_MAX`) активные шарды не попадают в результат, а неактивные попадают. — покрыто: `GetFreeShardsTest::testHugeRentTimeout`

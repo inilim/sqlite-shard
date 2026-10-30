@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Inilim\Test\Registry;
 
+use Inilim\IPDO\IPDO;
 use Inilim\IPDO\IPDOSQLite;
 use Inilim\SqliteShard\CreateConfig;
 use Inilim\SqliteShard\Registry;
@@ -39,6 +40,7 @@ final class GetFreeShardsTest extends TestCase
             schemaSql: ['CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)'],
             name: 'test',
             minShards: 5,
+            rentTimeout: 3600,
         )));
         foreach ($reg->getAllShards() as $shard) {
             $reg->rent($shard);
@@ -47,7 +49,7 @@ final class GetFreeShardsTest extends TestCase
         self::assertSame([], $reg->getFreeShards());
     }
 
-    // Смешанный набор: свежий активный исключён; неактивные и просроченные
+    // Смешанный набор: свежие активные исключены; неактивные и просроченные
     // включены.
     public function testMixedSet(): void
     {
@@ -55,28 +57,30 @@ final class GetFreeShardsTest extends TestCase
             baseDir: $this->tmpDir,
             schemaSql: ['CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)'],
             name: 'test',
-            rentTimeout: 30,
+            rentTimeout: 300,
         );
         $reg = $this->registerRegistry(Registry::create($cfg));
         $all = $reg->getAllShards();
 
-        $reg->rent($all[0]);                       // свежий активный — исключается
-        $reg->rent($all[1]);                       // остаётся свободным? нет — rent сразу
-        self::assertTrue($reg->isFree($all[2]));    // свободный
-        $reg->rent($all[3]);
-        $ipdo = new IPDOSQLite($cfg->ptfRegistry); // просроченный
+        $reg->rent($all[0]); // свежий активный — исключается
+        $reg->rent($all[1]); // свежий активный — исключается
+        $reg->rent($all[3]); // активный, но просрочим — включается
+
+        $ipdo = new IPDOSQLite($cfg->ptfRegistry);
         try {
-            $ipdo->exec('UPDATE shards SET updated_at = {t} WHERE id = {id}', ['t' => \time() - 40, 'id' => $all[3]->id]);
+            $ipdo->exec('UPDATE shards SET updated_at = {t} WHERE id = {id}', ['t' => \time() - 400, 'id' => $all[3]->id]);
         } finally {
             $ipdo->close();
         }
 
         $free = \array_map(static fn(Shard $s): string => $s->id, $reg->getFreeShards());
 
+        self::assertCount(3, $free);
         self::assertNotContains($all[0]->id, $free);
         self::assertNotContains($all[1]->id, $free);
         self::assertContains($all[2]->id, $free);
         self::assertContains($all[3]->id, $free);
+        self::assertContains($all[4]->id, $free);
     }
 
     // Активный шард с updated_at == time()-rent_timeout включается (граница <=).
@@ -108,7 +112,7 @@ final class GetFreeShardsTest extends TestCase
             baseDir: $this->tmpDir,
             schemaSql: ['CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)'],
             name: 'test',
-            rentTimeout: 30,
+            rentTimeout: 3600,
         );
         $reg = $this->registerRegistry(Registry::create($cfg));
         $shard = $reg->getAllShards()[0];
@@ -169,7 +173,7 @@ final class GetFreeShardsTest extends TestCase
             baseDir: $this->tmpDir,
             schemaSql: ['CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)'],
             name: 'test',
-            rentTimeout: 30,
+            rentTimeout: 300,
         );
         $reg = $this->registerRegistry(Registry::create($cfg));
         $all = $reg->getAllShards();
@@ -242,32 +246,40 @@ final class GetFreeShardsTest extends TestCase
         self::assertSame([], $reg->getFreeShards());
     }
 
-    // Метод не меняет состояние: leftTimeUntilRelease и rentValid не меняются.
+    // Метод не меняет состояние: не арендует, не освобождает и не обновляет
+    // записи в таблицах shards и kv.
     public function testDoesNotChangeState(): void
     {
-        $reg = $this->registerRegistry(Registry::create(new CreateConfig(
+        $cfg = new CreateConfig(
             baseDir: $this->tmpDir,
             schemaSql: ['CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)'],
             name: 'test',
-        )));
-        $states = [];
-        foreach ($reg->getAllShards() as $shard) {
-            $states[$shard->id] = [$reg->leftTimeUntilRelease($shard), $reg->rentValid($shard)];
-        }
+        );
+        $reg = $this->registerRegistry(Registry::create($cfg));
+        $reg->rent($reg->getAllShards()[0]);
 
-        $reg->getFreeShards();
+        $ipdo = new IPDOSQLite($cfg->ptfRegistry);
+        try {
+            $beforeShards = $ipdo->exec(
+                'SELECT id, schema_version, active, created_at, updated_at, owner_token FROM shards ORDER BY id',
+                [],
+                IPDO::FETCH_ALL_NUM
+            );
+            $beforeKv = $ipdo->exec('SELECT k, v FROM kv ORDER BY k', [], IPDO::FETCH_ALL_NUM);
 
-        foreach ($states as $id => [$left, $valid]) {
-            $shard = null;
-            foreach ($reg->getAllShards() as $s) {
-                if ($s->id === $id) {
-                    $shard = $s;
-                    break;
-                }
-            }
-            self::assertNotNull($shard);
-            self::assertSame($left, $reg->leftTimeUntilRelease($shard));
-            self::assertSame($valid, $reg->rentValid($shard));
+            $reg->getFreeShards();
+
+            $afterShards = $ipdo->exec(
+                'SELECT id, schema_version, active, created_at, updated_at, owner_token FROM shards ORDER BY id',
+                [],
+                IPDO::FETCH_ALL_NUM
+            );
+            $afterKv = $ipdo->exec('SELECT k, v FROM kv ORDER BY k', [], IPDO::FETCH_ALL_NUM);
+
+            self::assertSame($beforeShards, $afterShards);
+            self::assertSame($beforeKv, $afterKv);
+        } finally {
+            $ipdo->close();
         }
     }
 
@@ -278,14 +290,14 @@ final class GetFreeShardsTest extends TestCase
             baseDir: $this->tmpDir,
             schemaSql: ['CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)'],
             name: 'test',
-            rentTimeout: 30,
+            rentTimeout: 120,
         );
         $reg = $this->registerRegistry(Registry::create($cfg));
         $shard = $reg->getAllShards()[0];
         $reg->rent($shard);
         $ipdo = new IPDOSQLite($cfg->ptfRegistry);
         try {
-            $ipdo->exec('UPDATE shards SET updated_at = {t} WHERE id = {id}', ['t' => \time() - 20, 'id' => $shard->id]);
+            $ipdo->exec('UPDATE shards SET updated_at = {t} WHERE id = {id}', ['t' => \time() - 30, 'id' => $shard->id]);
         } finally {
             $ipdo->close();
         }
@@ -296,7 +308,7 @@ final class GetFreeShardsTest extends TestCase
 
         self::assertContains($shard->id, \array_map(static fn(Shard $s): string => $s->id, $reg->getFreeShards()));
 
-        $reg->setRentTimeout(30);
+        $reg->setRentTimeout(120);
 
         self::assertNotContains($shard->id, \array_map(static fn(Shard $s): string => $s->id, $reg->getFreeShards()));
     }
@@ -308,6 +320,7 @@ final class GetFreeShardsTest extends TestCase
             baseDir: $this->tmpDir,
             schemaSql: ['CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)'],
             name: 'test',
+            rentTimeout: 3600,
         )));
         $shard = $reg->getAllShards()[0];
 
@@ -376,6 +389,20 @@ final class GetFreeShardsTest extends TestCase
 
         self::assertTrue($reg->isFree($shard));
         self::assertContains($shard->id, \array_map(static fn(Shard $s): string => $s->id, $reg->getFreeShards()));
+
+        $ipdo = new IPDOSQLite($cfg->ptfRegistry);
+        try {
+            $row = $ipdo->exec(
+                'SELECT active, owner_token FROM shards WHERE id = {id}',
+                ['id' => $shard->id],
+                IPDO::FETCH_ONCE_NUM
+            );
+            self::assertSame(1, (int)$row[0]);
+            self::assertNotNull($row[1]);
+        } finally {
+            $ipdo->close();
+        }
+
         self::assertFalse($reg->rentValid($shard));
     }
 }
