@@ -139,6 +139,7 @@ final class CreateNewShardsTest extends TestCase
 
         $ipdo = $reg->getIPDOByShard($shard);
         try {
+            self::assertTrue($ipdo->existsTable('items'));
             $row = $ipdo->exec(
                 "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_name'",
                 [],
@@ -217,14 +218,31 @@ final class CreateNewShardsTest extends TestCase
         )));
         $busy = $reg->tryRentFree();
         self::assertNotNull($busy);
-        $oldIds = \array_map(static fn(Shard $s): string => $s->id, $reg->getAllShards());
+
+        $oldShards = $reg->getAllShards();
+        $oldIds = \array_map(static fn(Shard $s): string => $s->id, $oldShards);
+        $oldFiles = [];
+        foreach ($oldIds as $id) {
+            $oldFiles[$id] = Path::normalize(\sprintf('%s/%s.sqlite', $reg->baseDir, $id));
+            self::assertFileExists($oldFiles[$id]);
+        }
 
         $reg->createNewShards(2);
 
         self::assertTrue($reg->rentValid($busy));
-        self::assertCount(7, $reg->getAllShards());
+        $afterShards = $reg->getAllShards();
+        self::assertCount(7, $afterShards);
+        $afterIds = \array_map(static fn(Shard $s): string => $s->id, $afterShards);
         foreach ($oldIds as $id) {
-            self::assertContains($id, \array_map(static fn(Shard $s): string => $s->id, $reg->getAllShards()));
+            self::assertContains($id, $afterIds);
+            self::assertFileExists($oldFiles[$id]);
+        }
+        foreach ($afterShards as $shard) {
+            if ($shard->id === $busy->id) {
+                self::assertFalse($reg->isFree($shard));
+            } elseif (\in_array($shard->id, $oldIds, true)) {
+                self::assertTrue($reg->isFree($shard));
+            }
         }
     }
 
@@ -297,6 +315,7 @@ final class CreateNewShardsTest extends TestCase
             name: 'test',
             minShards: 5,
         )));
+        $filesBefore = \glob($this->tmpDir . '/*.sqlite');
 
         foreach ([1.5, '2', true, null] as $bad) {
             try {
@@ -307,6 +326,7 @@ final class CreateNewShardsTest extends TestCase
         }
 
         self::assertSame(5, $reg->getCountShards());
+        self::assertSame($filesBefore, \glob($this->tmpDir . '/*.sqlite'));
     }
 
     // Некорректный schema_sql → IPDOException; частично созданные файлы
@@ -319,6 +339,8 @@ final class CreateNewShardsTest extends TestCase
             name: 'test',
         );
         $reg = $this->registerRegistry(Registry::create($cfg));
+        $oldIds = \array_map(static fn(Shard $s): string => $s->id, $reg->getAllShards());
+
         $ipdo = new IPDOSQLite($cfg->ptfRegistry);
         try {
             $ipdo->exec('INSERT INTO kv (k, v) VALUES ({k}, {v}) ON CONFLICT(k) DO UPDATE SET v = {v}', ['k' => 'schema_sql', 'v' => \json_encode(['value' => ['BREAK SQL']])]);
@@ -331,6 +353,10 @@ final class CreateNewShardsTest extends TestCase
             self::fail('IPDOException expected');
         } catch (IPDOException) {
             self::assertSame(5, $reg->getCountShards());
+            self::assertEqualsCanonicalizing(
+                $oldIds,
+                \array_map(static fn(Shard $s): string => $s->id, $reg->getAllShards()),
+            );
             self::assertCount(6, \glob($this->tmpDir . '/*.sqlite'));
         }
     }
@@ -345,14 +371,16 @@ final class CreateNewShardsTest extends TestCase
             name: 'test',
         );
         $reg = $this->registerRegistry(Registry::create($cfg));
+        $oldIds = \array_map(static fn(Shard $s): string => $s->id, $reg->getAllShards());
+
         $ipdo = new IPDOSQLite($cfg->ptfRegistry);
         try {
             // блокирует вставку, когда записей уже 6 (5 старых + 1 новый) —
             // то есть вторая запись вызова createNewShards(2) упадёт
             $ipdo->exec(
-                'CREATE TRIGGER no_second BEFORE INSERT ON shards '
-                    . 'WHEN (SELECT COUNT(*) FROM shards) >= 6 '
-                    . 'BEGIN SELECT RAISE(ABORT, "no second"); END',
+                "CREATE TRIGGER no_second BEFORE INSERT ON shards "
+                    . "WHEN (SELECT COUNT(*) FROM shards) >= 6 "
+                    . "BEGIN SELECT RAISE(ABORT, 'no second'); END",
                 [],
                 \Inilim\IPDO\IPDOSQLite::FETCH_VOID,
             );
@@ -366,6 +394,22 @@ final class CreateNewShardsTest extends TestCase
         } catch (IPDOException) {
             // первый шард создан, второй — нет
             self::assertSame(6, $reg->getCountShards());
+
+            $afterShards = $reg->getAllShards();
+            $afterIds = \array_map(static fn(Shard $s): string => $s->id, $afterShards);
+            $newIds = \array_values(\array_diff($afterIds, $oldIds));
+            self::assertCount(1, $newIds);
+
+            $newShard = null;
+            foreach ($afterShards as $shard) {
+                if ($shard->id === $newIds[0]) {
+                    $newShard = $shard;
+                    break;
+                }
+            }
+            self::assertNotNull($newShard);
+            self::assertFileExists(Path::normalize(\sprintf('%s/%s.sqlite', $reg->baseDir, $newShard->id)));
+            self::assertTrue($reg->isFree($newShard));
         }
 
         // суммарный набор .sqlite: 5 старых шардов + реестр + 1 успешный новый
@@ -381,6 +425,8 @@ final class CreateNewShardsTest extends TestCase
             name: 'test',
         );
         $reg = $this->registerRegistry(Registry::create($cfg));
+        $oldIds = \array_map(static fn(Shard $s): string => $s->id, $reg->getAllShards());
+
         $ipdo = new IPDOSQLite($cfg->ptfRegistry);
         try {
             $ipdo->exec('DELETE FROM kv WHERE k = {k}', ['k' => 'schema_sql']);
@@ -394,6 +440,10 @@ final class CreateNewShardsTest extends TestCase
             self::fail('KeyNotFoundKvException expected');
         } catch (KeyNotFoundKvException) {
             self::assertSame(5, $reg->getCountShards());
+            self::assertEqualsCanonicalizing(
+                $oldIds,
+                \array_map(static fn(Shard $s): string => $s->id, $reg->getAllShards()),
+            );
             self::assertSame($filesBefore, \glob($this->tmpDir . '/*.sqlite'));
         }
     }
