@@ -1,0 +1,8 @@
+- [x] Если количество шардов уже не меньше `min_shards`, метод ничего не создаёт и возвращает тот же экземпляр `Registry`. — покрыто: `EnsureMinShardsTest::testDoesNothingWhenCountIsAlreadyEnough`
+- [x] Если шардов меньше `min_shards`, создаётся ровно недостающее количество шардов; старые шарды сохраняются, идентификаторы уникальны. — покрыто: `EnsureMinShardsTest::testCreatesExactlyMissingShards`
+- [x] Если шардов больше `min_shards`, метод не удаляет лишние шарды. — покрыто: `EnsureMinShardsTest::testDoesNotDeleteShardsWhenCountExceedsMin`
+- [x] Повторный вызов после достижения `min_shards` ничего не создаёт. — покрыто: `EnsureMinShardsTest::testSecondCallCreatesNothing`
+- [x] Новые шарды создаются с применённой схемой из registry. — покрыто: `EnsureMinShardsTest::testNewShardsReceiveSchema`
+- [x] При активной блокировке создания шардов метод выбрасывает `ShardsCreationLockedException` и не создаёт новые шарды. — покрыто: `EnsureMinShardsTest::testThrowsWhenShardsCreationLocked`
+- [x] Устаревшая блокировка создания шардов не мешает созданию. — покрыто: `EnsureMinShardsTest::testIgnoresStaleCreationLock`
+- [x] Если создание не требуется, блокировка не проверяется и исключение не выбрасывается. — покрыто: `EnsureMinShardsTest::testDoesNotCheckLockWhenNoCreationNeeded`
