@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Inilim\Test\Registry;
 
+use Inilim\IPDO\IPDO;
 use Inilim\IPDO\IPDOSQLite;
 use Inilim\SqliteShard\CreateConfig;
 use Inilim\SqliteShard\Registry;
@@ -161,8 +162,55 @@ final class ExistsShardTest extends TestCase
         self::assertTrue($reg->existsShard($shard));
     }
 
-    // Метод не меняет состояние аренды и не переживает исключений.
+    // Метод не меняет состояние аренды и не обращается к файлу шарда.
     public function testDoesNotChangeShardState(): void
+    {
+        $cfg = new CreateConfig(
+            baseDir: $this->tmpDir,
+            schemaSql: ['CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)'],
+            name: 'test',
+        );
+        $reg = $this->registerRegistry(Registry::create($cfg));
+        $shard = $reg->tryRentFree();
+        self::assertNotNull($shard);
+
+        // Снимок строки shards: активность / updated_at / owner_token не
+        // должны сдвинуться после вызова existsShard.
+        $snapshotBefore = $this->readShardRow($cfg->ptfRegistry, $shard->id);
+        self::assertNotSame([], $snapshotBefore, 'Шард должен присутствовать в реестре');
+
+        self::assertTrue($reg->existsShard($shard));
+
+        $snapshotAfter = $this->readShardRow($cfg->ptfRegistry, $shard->id);
+        self::assertSame($snapshotBefore, $snapshotAfter, 'existsShard не должен менять строку shards');
+        self::assertTrue($reg->rentValid($shard));
+    }
+
+    // Повторные вызовы идемпотентны: не меняют строку shards и дают тот же
+    // результат независимо от количества вызовов.
+    public function testRepeatedCallsAreIdempotent(): void
+    {
+        $cfg = new CreateConfig(
+            baseDir: $this->tmpDir,
+            schemaSql: ['CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)'],
+            name: 'test',
+        );
+        $reg = $this->registerRegistry(Registry::create($cfg));
+        $shard = $reg->getAllShards()[0];
+
+        $snapshotBefore = $this->readShardRow($cfg->ptfRegistry, $shard->id);
+        self::assertNotSame([], $snapshotBefore, 'Шард должен присутствовать в реестре');
+
+        self::assertTrue($reg->existsShard($shard));
+        self::assertTrue($reg->existsShard($shard));
+        self::assertTrue($reg->existsShard($shard));
+
+        self::assertSame($snapshotBefore, $this->readShardRow($cfg->ptfRegistry, $shard->id));
+    }
+
+    // id с SQL-инъекцией не даёт ложного совпадения: параметры биндятся,
+    // а не подставляются в текст запроса.
+    public function testReturnsFalseForSqlInjectionLikeId(): void
     {
         $reg = $this->registerRegistry(Registry::create(
             new CreateConfig(
@@ -171,12 +219,41 @@ final class ExistsShardTest extends TestCase
                 name: 'test',
             ),
         ));
-        $shard = $reg->tryRentFree();
-        self::assertNotNull($shard);
-        $leftBefore = $reg->leftTimeUntilRelease($shard);
 
-        self::assertTrue($reg->existsShard($shard));
-        self::assertSame($leftBefore, $reg->leftTimeUntilRelease($shard));
-        self::assertTrue($reg->rentValid($shard));
+        foreach (
+            [
+                "' OR '1'='1",
+                "1' OR 1=1 --",
+                '" OR 1=1 --',
+                "' UNION SELECT id FROM shards --",
+            ] as $id
+        ) {
+            self::assertFalse(
+                $reg->existsShard(new Shard($id, $reg)),
+                \sprintf('id "%s" не должен давать true', $id),
+            );
+        }
+    }
+
+    /**
+     * Снимок строки таблицы shards для проверки «состояние не изменилось».
+     * Открывает отдельное соединение, чтобы не задеть основное соединение
+     * реестра, и закрывает его в finally.
+     *
+     * @return array<int,mixed>
+     */
+    private function readShardRow(string $ptfRegistry, string $id): array
+    {
+        $ipdo = new IPDOSQLite($ptfRegistry);
+        try {
+            $row = $ipdo->exec(
+                'SELECT active, updated_at, owner_token, schema_version FROM shards WHERE id = {id}',
+                ['id' => $id],
+                IPDO::FETCH_ONCE_NUM,
+            );
+            return \is_array($row) ? $row : [];
+        } finally {
+            $ipdo->close();
+        }
     }
 }

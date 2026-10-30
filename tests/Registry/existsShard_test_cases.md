@@ -7,3 +7,5 @@
 - [x] Если запись шарда удалена, но файл остался, возвращается `false`. — покрыто: `ExistsShardTest::testReturnsFalseAfterRowDeletedEvenIfFileRemains`
 - [x] Если файл шарда удалён, но запись осталась, возвращается `true`. — покрыто: `ExistsShardTest::testReturnsTrueAfterFileDeleted`
 - [x] Метод не меняет состояние аренды и не обращается к файлу шарда. — покрыто: `ExistsShardTest::testDoesNotChangeShardState`
+- [x] Повторные вызовы идемпотентны и не меняют строку `shards`. — покрыто: `ExistsShardTest::testRepeatedCallsAreIdempotent`
+- [x] `id`, похожий на SQL-инъекцию, не даёт ложного совпадения (значения биндятся как параметры). — покрыто: `ExistsShardTest::testReturnsFalseForSqlInjectionLikeId`
