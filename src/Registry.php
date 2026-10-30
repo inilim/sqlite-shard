@@ -257,6 +257,7 @@ class Registry
      */
     function rentFree(): Shard
     {
+        // TODO продублировать логику взятия шарда сюда
         $shards = $this->getFreeShards();
         if ([] !== $shards) {
             // \shuffle($shards);
