@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Inilim\Test\Registry;
 
+use Inilim\IPDO\IPDO;
 use Inilim\IPDO\IPDOSQLite;
 use Inilim\SqliteShard\CreateConfig;
 use Inilim\SqliteShard\Registry;
@@ -163,7 +164,7 @@ final class IsFreeTest extends TestCase
         $reg->rent($shard);
         $ipdo = new IPDOSQLite($cfg->ptfRegistry);
         try {
-            $ipdo->exec('UPDATE shards SET updated_at = {t} WHERE id = {id}', ['t' => \time() - 20, 'id' => $shard->id]);
+            $ipdo->exec('UPDATE shards SET updated_at = {t} WHERE id = {id}', ['t' => \time() - 15, 'id' => $shard->id]);
         } finally {
             $ipdo->close();
         }
@@ -223,6 +224,46 @@ final class IsFreeTest extends TestCase
 
         self::assertSame(-1, $reg->leftTimeUntilRelease($shard));
         self::assertFalse($reg->rentValid($shard));
+    }
+
+    public function testIsFreeDoesNotAutoReleaseExpiredRentedShard(): void
+    {
+        $cfg = new CreateConfig(
+            baseDir: $this->tmpDir,
+            schemaSql: ['CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)'],
+            name: 'test',
+            rentTimeout: 30,
+        );
+        $reg = $this->registerRegistry(Registry::create($cfg));
+        $shard = $reg->tryRentFree();
+        self::assertNotNull($shard);
+
+        $ipdo = new IPDOSQLite($cfg->ptfRegistry);
+        try {
+            $ipdo->exec(
+                'UPDATE shards SET updated_at = {t} WHERE id = {id}',
+                ['t' => \time() - 31, 'id' => $shard->id],
+            );
+        } finally {
+            $ipdo->close();
+        }
+
+        self::assertTrue($reg->isFree($shard));
+
+        $ipdo = new IPDOSQLite($cfg->ptfRegistry);
+        try {
+            $row = $ipdo->exec(
+                'SELECT active, owner_token FROM shards WHERE id = {id}',
+                ['id' => $shard->id],
+                IPDO::FETCH_ONCE_NUM,
+            );
+        } finally {
+            $ipdo->close();
+        }
+
+        self::assertIsArray($row);
+        self::assertSame(1, (int) $row[0]);
+        self::assertNotNull($row[1]);
     }
 
     public function testResultDefinedByRegistryWhoseMethodWasCalled(): void

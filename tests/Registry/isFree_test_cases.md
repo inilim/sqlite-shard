@@ -9,4 +9,5 @@
 - [x] После успешного `heartbeat` свежий активный шард остаётся занятым (`false`); после `release` становится свободным (`true`). — покрыто: `IsFreeTest::testHeartbeatKeepsShardBusyAndReleaseMakesItFree`
 - [x] Отсутствие файла шарда не влияет на результат; проверяется только запись реестра. — покрыто: `IsFreeTest::testMissingShardFileDoesNotAffectResult`
 - [x] Метод не меняет состояние шарда (не арендует и не освобождает). — покрыто: `IsFreeTest::testMethodDoesNotChangeShardState`
+- [x] Для просроченного активного арендованного шарда `isFree` возвращает `true`, но не сбрасывает `active`/`owner_token` и не освобождает аренду автоматически. — покрыто: `IsFreeTest::testIsFreeDoesNotAutoReleaseExpiredRentedShard`
 - [x] Для шарда, чей `id` существует в текущем реестре, результат определяется этим реестром, даже если объект `Shard` ссылается на другой `Registry`. — покрыто: `IsFreeTest::testResultDefinedByRegistryWhoseMethodWasCalled`
