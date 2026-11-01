@@ -33,9 +33,9 @@
     },
     "require": {
         "php": ">=8.4",
-        "inilim/di": "0.0.*",
-        "inilim/ipdo": "0.0.*",
-        "inilim/tools": "0.0.*",
+        "inilim/di": "^0.1",
+        "inilim/ipdo": "^0.1",
+        "inilim/tools": "^0.1",
         "symfony/finder": "^8.1"
     },
     "require-dev": {
